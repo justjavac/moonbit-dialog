@@ -1,4 +1,5 @@
 ///|
+/// Run the multi-file picker example with named filters.
 fn main {
   let dialog = @dialog.OpenFilesDialog::new(
     title="Open source files",

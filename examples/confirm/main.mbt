@@ -1,4 +1,5 @@
 ///|
+/// Run the yes-no confirmation dialog example.
 fn main {
   match
     @dialog.ask_yes_no("Overwrite the generated files?", title="moonbit-dialog") {

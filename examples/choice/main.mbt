@@ -1,4 +1,5 @@
 ///|
+/// Run the standard-button dialog example with custom labels.
 fn main {
   let dialog = @dialog.ChoiceDialog::new(
     "Save changes before closing?",

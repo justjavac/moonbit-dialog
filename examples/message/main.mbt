@@ -1,4 +1,5 @@
 ///|
+/// Run the simple warning dialog example.
 fn main {
   match
     @dialog.show_warning(

@@ -5,6 +5,9 @@
 ///
 /// The dialog starts with `DialogLabels::none()`, which keeps native button
 /// captions until callers explicitly override them with `with_labels`.
+///
+/// Like the other dialog builders, this only stores request data and does not
+/// interact with the operating system until `show` is invoked.
 pub fn ConfirmDialog::new(
   message : StringView,
   title? : StringView = "Confirm",
@@ -23,6 +26,9 @@ pub fn ConfirmDialog::new(
 ///
 /// The result distinguishes which backend handled the request and whether the
 /// user picked the affirmative or negative action.
+///
+/// Successful outcomes normally use `Yes` or `No`, while transport and native
+/// failures are surfaced separately through `Err(DialogError)`.
 pub fn ConfirmDialog::show(
   self : ConfirmDialog,
 ) -> Result[DialogOutcome, DialogError] {
@@ -35,6 +41,9 @@ pub fn ConfirmDialog::show(
 /// This convenience function uses the same defaults as `ConfirmDialog::new`
 /// and returns the selected response together with the backend that displayed
 /// the dialog.
+///
+/// It is the shortest way to request a typed confirmation while preserving the
+/// same backend and error details as `ConfirmDialog::show`.
 pub fn ask_yes_no(
   message : StringView,
   title? : StringView = "Confirm",
