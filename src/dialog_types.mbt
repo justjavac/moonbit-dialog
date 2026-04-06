@@ -36,6 +36,22 @@ pub(all) enum DialogLevel {
 } derive(Eq, Show)
 
 ///|
+/// The user's response to a dialog.
+pub(all) enum DialogResponse {
+  Ok
+  Cancel
+  Yes
+  No
+} derive(Eq, Show)
+
+///|
+/// A completed dialog result including the backend and the chosen response.
+pub struct DialogOutcome {
+  backend : DialogBackend
+  response : DialogResponse
+} derive(Eq, Show)
+
+///|
 /// Errors returned when a dialog cannot be shown.
 ///
 /// - `UnsupportedPlatform` means the current OS is outside the current scope.
@@ -53,6 +69,14 @@ pub(all) enum DialogError {
 /// This type keeps the public API explicit and easy to extend later when the
 /// module grows beyond a single message box implementation.
 pub struct MessageDialog {
+  title : String
+  message : String
+  level : DialogLevel
+} derive(Eq, Show)
+
+///|
+/// A yes-or-no confirmation dialog request.
+pub struct ConfirmDialog {
   title : String
   message : String
   level : DialogLevel

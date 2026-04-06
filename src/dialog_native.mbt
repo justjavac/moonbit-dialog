@@ -30,6 +30,9 @@ const SUCCESS_RESPONSE_STRIDE : Int = 10
 const DIALOG_BUTTONS_OK_CODE : Int = 0
 
 ///|
+const DIALOG_BUTTONS_YES_NO_CODE : Int = 2
+
+///|
 /// Encode a MoonBit string as UTF-8 bytes for native APIs.
 fn encode_utf8_bytes(text : String) -> Bytes {
   @utf8.encode(text[:])
@@ -66,6 +69,18 @@ fn backend_from_success(raw : Int) -> DialogBackend? {
 }
 
 ///|
+/// Decode the response part of a successful native result.
+fn response_from_success(raw : Int) -> DialogResponse? {
+  match raw / SUCCESS_RESPONSE_STRIDE {
+    0 => Some(Ok)
+    1 => Some(Cancel)
+    2 => Some(Yes)
+    3 => Some(No)
+    _ => None
+  }
+}
+
+///|
 /// Decode backend failures from the C stub result.
 fn decode_failure_status(raw : Int) -> (DialogBackend, Int)? {
   if raw > -NATIVE_FAILURE_BASE {
@@ -80,25 +95,37 @@ fn decode_failure_status(raw : Int) -> (DialogBackend, Int)? {
 }
 
 ///|
-/// Decode a raw native dialog status into a backend-only public result.
-fn decode_backend_result(
+/// Decode a raw native dialog status into a backend-and-response result.
+fn decode_dialog_outcome(
   platform : Platform,
   raw : Int,
-) -> Result[DialogBackend, DialogError] {
+) -> Result[DialogOutcome, DialogError] {
   if raw == BACKEND_UNAVAILABLE_STATUS {
     Err(BackendUnavailable(platform))
   } else if raw == UNSUPPORTED_PLATFORM_STATUS {
     Err(UnsupportedPlatform(platform))
   } else if raw >= 0 {
-    match backend_from_success(raw) {
-      Some(backend) => Ok(backend)
-      None => Err(UnsupportedPlatform(platform))
+    match (backend_from_success(raw), response_from_success(raw)) {
+      (Some(backend), Some(response)) => Ok({ backend, response })
+      _ => Err(UnsupportedPlatform(platform))
     }
   } else {
     match decode_failure_status(raw) {
       Some((backend, detail)) => Err(BackendFailed(backend, detail))
       None => Err(UnsupportedPlatform(platform))
     }
+  }
+}
+
+///|
+/// Decode a raw native dialog status into a backend-only public result.
+fn decode_backend_result(
+  platform : Platform,
+  raw : Int,
+) -> Result[DialogBackend, DialogError] {
+  match decode_dialog_outcome(platform, raw) {
+    Ok(outcome) => Ok(outcome.backend)
+    Err(error) => Err(error)
   }
 }
 

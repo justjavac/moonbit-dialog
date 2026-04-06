@@ -12,6 +12,7 @@
 - Native-only MoonBit package
 - Windows, macOS, and Linux support
 - Info, warning, error, and question dialog levels
+- Yes/no confirmation dialogs with explicit responses
 - Small public API focused on readability
 - Detailed public API documentation in source
 - Coverage-aware tests plus Codecov badges
@@ -60,6 +61,20 @@ ignore(@dialog.show_warning("Configuration file is missing."))
 ignore(@dialog.show_error("Build failed."))
 ```
 
+Use `ConfirmDialog` or `ask_yes_no` when you need a typed answer:
+
+```moonbit
+match @dialog.ask_yes_no("Overwrite the existing build output?") {
+  Ok(outcome) =>
+    match outcome.response {
+      Yes => println("Continuing with \{outcome.backend}")
+      No => println("Cancelled by user")
+      _ => ()
+    }
+  Err(error) => println("Dialog failed: \{error}")
+}
+```
+
 ## Backend Strategy
 
 This first version chooses the smallest dependable implementation on each platform:
@@ -77,13 +92,17 @@ The package currently exposes:
 - `Platform`
 - `DialogBackend`
 - `DialogLevel`
+- `DialogResponse`
+- `DialogOutcome`
 - `DialogError`
 - `MessageDialog`
+- `ConfirmDialog`
 - `current_platform()`
 - `show_message(message, title?, level?)`
 - `show_info(message, title?)`
 - `show_warning(message, title?)`
 - `show_error(message, title?)`
+- `ask_yes_no(message, title?, level?)`
 
 The API returns `Result[DialogBackend, DialogError]` so callers can handle missing backends or backend failures without guessing.
 
@@ -120,7 +139,6 @@ This initial release only implements a message dialog with an OK-style acknowled
 
 Planned future work can build on the same structure to add:
 
-- confirmation dialogs
 - custom button sets
 - richer Linux backend detection
 - native platform bindings where they improve behavior

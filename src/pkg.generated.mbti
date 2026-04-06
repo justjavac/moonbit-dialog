@@ -2,6 +2,8 @@
 package "justjavac/dialog"
 
 // Values
+pub fn ask_yes_no(StringView, title? : StringView, level? : DialogLevel) -> Result[DialogOutcome, DialogError]
+
 pub fn current_platform() -> Platform
 
 pub fn show_error(StringView, title? : StringView) -> Result[DialogBackend, DialogError]
@@ -15,6 +17,14 @@ pub fn show_warning(StringView, title? : StringView) -> Result[DialogBackend, Di
 // Errors
 
 // Types and methods
+pub struct ConfirmDialog {
+  title : String
+  message : String
+  level : DialogLevel
+} derive(Eq, Show)
+pub fn ConfirmDialog::new(StringView, title? : StringView, level? : DialogLevel) -> Self
+pub fn ConfirmDialog::show(Self) -> Result[DialogOutcome, DialogError]
+
 pub(all) enum DialogBackend {
   WindowsWin32
   MacOSCoreFoundation
@@ -34,6 +44,18 @@ pub(all) enum DialogLevel {
   Warning
   Error
   Question
+} derive(Eq, Show)
+
+pub struct DialogOutcome {
+  backend : DialogBackend
+  response : DialogResponse
+} derive(Eq, Show)
+
+pub(all) enum DialogResponse {
+  Ok
+  Cancel
+  Yes
+  No
 } derive(Eq, Show)
 
 pub struct MessageDialog {

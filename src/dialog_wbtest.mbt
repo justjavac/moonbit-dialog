@@ -1,12 +1,22 @@
 ///|
-fn success_status_for_test(backend : DialogBackend) -> Int {
-  match backend {
+fn success_status_for_test(
+  backend : DialogBackend,
+  response? : DialogResponse = Ok,
+) -> Int {
+  let backend_code = match backend {
     WindowsWin32 => 0
     MacOSCoreFoundation => 1
     LinuxZenity => 2
     LinuxKDialog => 3
     LinuxXMessage => 4
   }
+  let response_code = match response {
+    Ok => 0
+    Cancel => 1
+    Yes => 2
+    No => 3
+  }
+  backend_code + response_code * SUCCESS_RESPONSE_STRIDE
 }
 
 ///|
@@ -74,6 +84,24 @@ test "success statuses map to the right backend" {
   assert_eq(
     decode_backend_result(Linux, success_status_for_test(LinuxXMessage)),
     Ok(LinuxXMessage),
+  )
+}
+
+///|
+test "dialog outcomes keep backend and response" {
+  assert_eq(
+    decode_dialog_outcome(
+      Windows,
+      success_status_for_test(WindowsWin32, response=Yes),
+    ),
+    Ok({ backend: WindowsWin32, response: Yes }),
+  )
+  assert_eq(
+    decode_dialog_outcome(
+      Linux,
+      success_status_for_test(LinuxZenity, response=No),
+    ),
+    Ok({ backend: LinuxZenity, response: No }),
   )
 }
 
