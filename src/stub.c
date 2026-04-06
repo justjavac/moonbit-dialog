@@ -36,19 +36,6 @@ static int32_t moonbit_dialog_encode_failure(int32_t backend, int32_t detail) {
   return -(DIALOG_FAILURE_BASE + backend * DIALOG_FAILURE_STRIDE + detail);
 }
 
-MOONBIT_FFI_EXPORT
-int32_t moonbit_dialog_platform_kind(void) {
-#if defined(_WIN32)
-  return 0;
-#elif defined(__APPLE__)
-  return 1;
-#elif defined(__linux__)
-  return 2;
-#else
-  return 3;
-#endif
-}
-
 #if defined(_WIN32)
 static wchar_t* moonbit_dialog_utf8_to_wide(const char* text) {
   int length = MultiByteToWideChar(CP_UTF8, 0, text, -1, NULL, 0);

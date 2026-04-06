@@ -1,8 +1,4 @@
 ///|
-/// Return the native OS kind as a small integer.
-extern "c" fn platform_kind_ffi() -> Int = "moonbit_dialog_platform_kind"
-
-///|
 /// Show a native message dialog and return a backend or failure code.
 #borrow(title, message)
 extern "c" fn show_message_ffi(title : Bytes, message : Bytes) -> Int = "moonbit_dialog_show_message"
@@ -18,17 +14,6 @@ const NATIVE_FAILURE_BASE : Int = 1000000
 
 ///|
 const NATIVE_FAILURE_STRIDE : Int = 100000
-
-///|
-/// Convert the native platform code into a public enum.
-fn platform_from_code(code : Int) -> Platform {
-  match code {
-    0 => Windows
-    1 => MacOS
-    2 => Linux
-    _ => Unknown
-  }
-}
 
 ///|
 /// Encode a MoonBit string as UTF-8 bytes for native APIs.
@@ -86,7 +71,27 @@ fn decode_native_result(
 }
 
 ///|
-/// Read the current platform once from the native stub.
+/// Resolve the native platform at compile time when the toolchain exposes it.
+#cfg(platform="windows")
 fn current_platform_internal() -> Platform {
-  platform_from_code(platform_kind_ffi())
+  Windows
+}
+
+///|
+#cfg(any(platform="macos", platform="darwin", platform="osx"))
+fn current_platform_internal() -> Platform {
+  MacOS
+}
+
+///|
+#cfg(platform="linux")
+fn current_platform_internal() -> Platform {
+  Linux
+}
+
+///|
+/// Fall back to `Unknown` when no recognized platform tag is available.
+#cfg(not(any(platform="windows", platform="macos", platform="darwin", platform="osx", platform="linux")))
+fn current_platform_internal() -> Platform {
+  Unknown
 }
