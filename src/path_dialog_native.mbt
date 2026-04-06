@@ -77,18 +77,16 @@ fn decode_path_dialog_outcome(
 }
 
 ///|
-/// Allocate the fixed output buffer used by native single-path dialogs.
-fn make_path_dialog_output_buffer() -> Bytes {
-  Bytes::new(PATH_DIALOG_BUFFER_SIZE)
-}
-
-///|
-/// Resolve the current platform and keep path-dialog callers free of boilerplate.
-fn[T] with_supported_platform(
-  f : (Platform) -> Result[T, DialogError],
-) -> Result[T, DialogError] {
+/// Run a single-path dialog callback and decode its raw native result.
+fn run_path_dialog_request(
+  callback : (Bytes) -> Int,
+) -> Result[PathDialogOutcome, DialogError] {
   match supported_platform_result() {
-    Ok(platform) => f(platform)
+    Ok(platform) => {
+      let path_out = Bytes::new(PATH_DIALOG_BUFFER_SIZE)
+      let raw_result = callback(path_out)
+      decode_path_dialog_outcome(platform, raw_result, path_out)
+    }
     Err(error) => Err(error)
   }
 }
@@ -100,17 +98,15 @@ fn show_open_file_request(
   directory : String,
   filters : Array[FileFilter],
 ) -> Result[PathDialogOutcome, DialogError] {
-  with_supported_platform(platform => {
-    let encoded_filters = encode_file_filters(filters)
-    let path_out = make_path_dialog_output_buffer()
-    let raw_result = open_file_dialog_ffi(
+  let encoded_filters = encode_file_filters(filters)
+  run_path_dialog_request(path_out => {
+    open_file_dialog_ffi(
       encode_utf8_bytes(title),
       encode_utf8_bytes(directory),
       encoded_filters,
       path_out,
       path_out.length(),
     )
-    decode_path_dialog_outcome(platform, raw_result, path_out)
   })
 }
 
@@ -123,10 +119,9 @@ fn show_save_file_request(
   filters : Array[FileFilter],
   default_extension : String,
 ) -> Result[PathDialogOutcome, DialogError] {
-  with_supported_platform(platform => {
-    let encoded_filters = encode_file_filters(filters)
-    let path_out = make_path_dialog_output_buffer()
-    let raw_result = save_file_dialog_ffi(
+  let encoded_filters = encode_file_filters(filters)
+  run_path_dialog_request(path_out => {
+    save_file_dialog_ffi(
       encode_utf8_bytes(title),
       encode_utf8_bytes(directory),
       encode_utf8_bytes(file_name),
@@ -135,7 +130,6 @@ fn show_save_file_request(
       path_out,
       path_out.length(),
     )
-    decode_path_dialog_outcome(platform, raw_result, path_out)
   })
 }
 
@@ -145,14 +139,12 @@ fn show_select_folder_request(
   title : String,
   directory : String,
 ) -> Result[PathDialogOutcome, DialogError] {
-  with_supported_platform(platform => {
-    let path_out = make_path_dialog_output_buffer()
-    let raw_result = select_folder_dialog_ffi(
+  run_path_dialog_request(path_out => {
+    select_folder_dialog_ffi(
       encode_utf8_bytes(title),
       encode_utf8_bytes(directory),
       path_out,
       path_out.length(),
     )
-    decode_path_dialog_outcome(platform, raw_result, path_out)
   })
 }
