@@ -1,4 +1,5 @@
 ///|
+/// Build a synthetic successful status code for decoder tests.
 fn success_status_for_test(
   backend : DialogBackend,
   response? : DialogResponse = Ok,
@@ -21,6 +22,7 @@ fn success_status_for_test(
 }
 
 ///|
+/// Build a synthetic backend failure status code for decoder tests.
 fn failure_status(backend : DialogBackend, detail : Int) -> Int {
   let detail = if detail < 0 {
     -detail

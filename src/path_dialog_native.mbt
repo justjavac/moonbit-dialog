@@ -11,6 +11,7 @@ const PATH_DIALOG_SELECTED_CODE : Int = 0
 const PATH_DIALOG_CANCELLED_CODE : Int = 1
 
 ///|
+/// Show a native open-file dialog and write the selected path into `path_out`.
 #borrow(title, directory, filters, path_out)
 extern "c" fn open_file_dialog_ffi(
   title : Bytes,
@@ -21,6 +22,7 @@ extern "c" fn open_file_dialog_ffi(
 ) -> Int = "moonbit_dialog_open_file"
 
 ///|
+/// Show a native save-file dialog and write the selected path into `path_out`.
 #borrow(title, directory, file_name, filters, default_extension, path_out)
 extern "c" fn save_file_dialog_ffi(
   title : Bytes,
@@ -33,6 +35,7 @@ extern "c" fn save_file_dialog_ffi(
 ) -> Int = "moonbit_dialog_save_file"
 
 ///|
+/// Show a native folder picker and write the selected path into `path_out`.
 #borrow(title, directory, path_out)
 extern "c" fn select_folder_dialog_ffi(
   title : Bytes,
@@ -42,11 +45,13 @@ extern "c" fn select_folder_dialog_ffi(
 ) -> Int = "moonbit_dialog_select_folder"
 
 ///|
+/// Decode the path-dialog selection kind from a successful status code.
 fn path_dialog_kind_from_success(raw : Int) -> Int {
   raw / SUCCESS_RESPONSE_STRIDE
 }
 
 ///|
+/// Decode a raw native path-dialog status and optional selected path.
 fn decode_path_dialog_outcome(
   platform : Platform,
   raw : Int,
@@ -79,6 +84,7 @@ fn decode_path_dialog_outcome(
 }
 
 ///|
+/// Show an open-file request through the native FFI and decode the result.
 fn show_open_file_request(
   title : String,
   directory : String,
@@ -101,6 +107,7 @@ fn show_open_file_request(
 }
 
 ///|
+/// Show a save-file request through the native FFI and decode the result.
 fn show_save_file_request(
   title : String,
   directory : String,
@@ -127,6 +134,7 @@ fn show_save_file_request(
 }
 
 ///|
+/// Show a folder-selection request through the native FFI and decode the result.
 fn show_select_folder_request(
   title : String,
   directory : String,

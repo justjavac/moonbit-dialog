@@ -253,12 +253,14 @@ fn current_platform_internal() -> Platform {
 }
 
 ///|
+/// Resolve the current platform as macOS for supported Apple targets.
 #cfg(any(platform="macos", platform="darwin", platform="osx"))
 fn current_platform_internal() -> Platform {
   MacOS
 }
 
 ///|
+/// Resolve the current platform as Linux when the native target is Linux.
 #cfg(platform="linux")
 fn current_platform_internal() -> Platform {
   Linux
