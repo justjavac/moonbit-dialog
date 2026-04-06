@@ -1,0 +1,17 @@
+{
+  "name": "justjavac/dialog",
+  "version": "0.1.0",
+  "source": "src",
+  "readme": "README.mbt.md",
+  "repository": "https://github.com/justjavac/moonbit-dialog",
+  "license": "MIT",
+  "keywords": [
+    "dialog",
+    "gui",
+    "native",
+    "message-box"
+  ],
+  "description": "Native-only message dialogs for MoonBit on Windows, macOS, and Linux.",
+  "preferred-target": "native",
+  "supported_targets": "+native"
+}

@@ -1,0 +1,43 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/dialog"
+
+// Values
+pub fn current_platform() -> Platform
+
+pub fn show_message(StringView, title? : StringView) -> Result[DialogBackend, DialogError]
+
+// Errors
+
+// Types and methods
+pub(all) enum DialogBackend {
+  WindowsWin32
+  MacOSCoreFoundation
+  LinuxZenity
+  LinuxKDialog
+  LinuxXMessage
+} derive(Eq, Show)
+
+pub(all) enum DialogError {
+  UnsupportedPlatform(Platform)
+  BackendUnavailable(Platform)
+  BackendFailed(DialogBackend, Int)
+} derive(Eq, Show)
+
+pub struct MessageDialog {
+  title : String
+  message : String
+} derive(Eq, Show)
+pub fn MessageDialog::new(StringView, title? : StringView) -> Self
+pub fn MessageDialog::show(Self) -> Result[DialogBackend, DialogError]
+
+pub(all) enum Platform {
+  Windows
+  MacOS
+  Linux
+  Unknown
+} derive(Eq, Show)
+
+// Type aliases
+
+// Traits
+
