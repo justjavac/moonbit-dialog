@@ -81,10 +81,6 @@ static int moonbit_dialog_has_text(const char* text) {
   return text != NULL && text[0] != '\0';
 }
 
-static int moonbit_dialog_has_label(const char* text) {
-  return moonbit_dialog_has_text(text);
-}
-
 static void moonbit_dialog_clear_output(
   moonbit_bytes_t output,
   int32_t output_len
@@ -309,7 +305,7 @@ static const char* moonbit_dialog_pick_label(
   const char* custom,
   const char* fallback
 ) {
-  return moonbit_dialog_has_label(custom) ? custom : fallback;
+  return moonbit_dialog_has_text(custom) ? custom : fallback;
 }
 
 typedef struct {
@@ -2439,7 +2435,7 @@ static int32_t moonbit_dialog_select_folder_macos(
 #define DIALOG_XMESSAGE_BUTTON_BASE 20
 
 static int moonbit_dialog_xmessage_label_safe(const char* label) {
-  if (!moonbit_dialog_has_label(label)) {
+  if (!moonbit_dialog_has_text(label)) {
     return 1;
   }
   return strchr(label, ':') == NULL && strchr(label, ',') == NULL;
@@ -2450,9 +2446,9 @@ static int moonbit_dialog_has_custom_labels(
   const char* reject_label,
   const char* cancel_label
 ) {
-  return moonbit_dialog_has_label(accept_label) ||
-    moonbit_dialog_has_label(reject_label) ||
-    moonbit_dialog_has_label(cancel_label);
+  return moonbit_dialog_has_text(accept_label) ||
+    moonbit_dialog_has_text(reject_label) ||
+    moonbit_dialog_has_text(cancel_label);
 }
 
 static const char* moonbit_dialog_zenity_mode(
@@ -2517,7 +2513,7 @@ static int32_t moonbit_dialog_show_linux_zenity(
     argv[index++] = "--no-cancel";
   }
 
-  if (moonbit_dialog_has_label(ok_label)) {
+  if (moonbit_dialog_has_text(ok_label)) {
     argv[index++] = "--ok-label";
     argv[index++] = ok_label;
   }

@@ -57,29 +57,39 @@ fn decode_path_dialog_outcome(
   raw : Int,
   path_out : Bytes,
 ) -> Result[PathDialogOutcome, DialogError] {
-  if raw == BACKEND_UNAVAILABLE_STATUS {
-    Err(BackendUnavailable(platform))
-  } else if raw == UNSUPPORTED_PLATFORM_STATUS {
-    Err(UnsupportedPlatform(platform))
-  } else if raw >= 0 {
-    match backend_from_success(raw) {
-      Some(backend) =>
-        match path_dialog_kind_from_success(raw) {
-          PATH_DIALOG_SELECTED_CODE =>
-            Ok({
-              backend,
-              selection: Selected(utf8_bytes_to_mbt_string(path_out)),
-            })
-          PATH_DIALOG_CANCELLED_CODE => Ok({ backend, selection: Cancelled })
-          _ => Err(UnsupportedPlatform(platform))
-        }
-      None => Err(UnsupportedPlatform(platform))
-    }
-  } else {
-    match decode_failure_status(raw) {
-      Some((backend, detail)) => Err(BackendFailed(backend, detail))
-      None => Err(UnsupportedPlatform(platform))
-    }
+  match decode_status_error(platform, raw) {
+    Some(error) => Err(error)
+    None =>
+      match backend_from_success(raw) {
+        Some(backend) =>
+          match path_dialog_kind_from_success(raw) {
+            PATH_DIALOG_SELECTED_CODE =>
+              Ok({
+                backend,
+                selection: Selected(utf8_bytes_to_mbt_string(path_out)),
+              })
+            PATH_DIALOG_CANCELLED_CODE => Ok({ backend, selection: Cancelled })
+            _ => Err(UnsupportedPlatform(platform))
+          }
+        None => Err(UnsupportedPlatform(platform))
+      }
+  }
+}
+
+///|
+/// Allocate the fixed output buffer used by native single-path dialogs.
+fn make_path_dialog_output_buffer() -> Bytes {
+  Bytes::new(PATH_DIALOG_BUFFER_SIZE)
+}
+
+///|
+/// Resolve the current platform and keep path-dialog callers free of boilerplate.
+fn[T] with_supported_platform(
+  f : (Platform) -> Result[T, DialogError],
+) -> Result[T, DialogError] {
+  match supported_platform_result() {
+    Ok(platform) => f(platform)
+    Err(error) => Err(error)
   }
 }
 
@@ -90,20 +100,18 @@ fn show_open_file_request(
   directory : String,
   filters : Array[FileFilter],
 ) -> Result[PathDialogOutcome, DialogError] {
-  let platform = current_platform_internal()
-  if platform == Unknown {
-    return Err(UnsupportedPlatform(Unknown))
-  }
-  let encoded_filters = encode_file_filters(filters)
-  let path_out = Bytes::new(PATH_DIALOG_BUFFER_SIZE)
-  let raw_result = open_file_dialog_ffi(
-    encode_utf8_bytes(title),
-    encode_utf8_bytes(directory),
-    encoded_filters,
-    path_out,
-    path_out.length(),
-  )
-  decode_path_dialog_outcome(platform, raw_result, path_out)
+  with_supported_platform(platform => {
+    let encoded_filters = encode_file_filters(filters)
+    let path_out = make_path_dialog_output_buffer()
+    let raw_result = open_file_dialog_ffi(
+      encode_utf8_bytes(title),
+      encode_utf8_bytes(directory),
+      encoded_filters,
+      path_out,
+      path_out.length(),
+    )
+    decode_path_dialog_outcome(platform, raw_result, path_out)
+  })
 }
 
 ///|
@@ -115,22 +123,20 @@ fn show_save_file_request(
   filters : Array[FileFilter],
   default_extension : String,
 ) -> Result[PathDialogOutcome, DialogError] {
-  let platform = current_platform_internal()
-  if platform == Unknown {
-    return Err(UnsupportedPlatform(Unknown))
-  }
-  let encoded_filters = encode_file_filters(filters)
-  let path_out = Bytes::new(PATH_DIALOG_BUFFER_SIZE)
-  let raw_result = save_file_dialog_ffi(
-    encode_utf8_bytes(title),
-    encode_utf8_bytes(directory),
-    encode_utf8_bytes(file_name),
-    encoded_filters,
-    encode_utf8_bytes(default_extension),
-    path_out,
-    path_out.length(),
-  )
-  decode_path_dialog_outcome(platform, raw_result, path_out)
+  with_supported_platform(platform => {
+    let encoded_filters = encode_file_filters(filters)
+    let path_out = make_path_dialog_output_buffer()
+    let raw_result = save_file_dialog_ffi(
+      encode_utf8_bytes(title),
+      encode_utf8_bytes(directory),
+      encode_utf8_bytes(file_name),
+      encoded_filters,
+      encode_utf8_bytes(default_extension),
+      path_out,
+      path_out.length(),
+    )
+    decode_path_dialog_outcome(platform, raw_result, path_out)
+  })
 }
 
 ///|
@@ -139,16 +145,14 @@ fn show_select_folder_request(
   title : String,
   directory : String,
 ) -> Result[PathDialogOutcome, DialogError] {
-  let platform = current_platform_internal()
-  if platform == Unknown {
-    return Err(UnsupportedPlatform(Unknown))
-  }
-  let path_out = Bytes::new(PATH_DIALOG_BUFFER_SIZE)
-  let raw_result = select_folder_dialog_ffi(
-    encode_utf8_bytes(title),
-    encode_utf8_bytes(directory),
-    path_out,
-    path_out.length(),
-  )
-  decode_path_dialog_outcome(platform, raw_result, path_out)
+  with_supported_platform(platform => {
+    let path_out = make_path_dialog_output_buffer()
+    let raw_result = select_folder_dialog_ffi(
+      encode_utf8_bytes(title),
+      encode_utf8_bytes(directory),
+      path_out,
+      path_out.length(),
+    )
+    decode_path_dialog_outcome(platform, raw_result, path_out)
+  })
 }
