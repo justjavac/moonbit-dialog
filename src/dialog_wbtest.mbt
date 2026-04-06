@@ -137,3 +137,65 @@ test "failure statuses clamp oversized details" {
   )
   assert_eq(result, Some((LinuxZenity, NATIVE_FAILURE_STRIDE - 1)))
 }
+
+///|
+test "UTF-8 decoding handles multibyte code points and truncated tails" {
+  let text = @utf8.decode([0xC3, 0xA9, 0xE4, 0xB8, 0xAD, 0xF0, 0x9F, 0x99, 0x82])
+  assert_eq(utf8_bytes_to_mbt_string(encode_utf8_bytes(text)), text)
+
+  let incomplete_two : Bytes = [0xC3]
+  let incomplete_three : Bytes = [0xE4, 0xB8]
+  let incomplete_four : Bytes = [0xF0, 0x9F, 0x99]
+  assert_eq(utf8_bytes_to_mbt_string(incomplete_two), "")
+  assert_eq(utf8_bytes_to_mbt_string(incomplete_three), "")
+  assert_eq(utf8_bytes_to_mbt_string(incomplete_four), "")
+}
+
+///|
+test "dialog level and button enums map to native codes" {
+  assert_eq(dialog_level_to_code(Info), 0)
+  assert_eq(dialog_level_to_code(Warning), 1)
+  assert_eq(dialog_level_to_code(Error), 2)
+  assert_eq(dialog_level_to_code(Question), 3)
+
+  assert_eq(dialog_buttons_to_code(Ok), DIALOG_BUTTONS_OK_CODE)
+  assert_eq(dialog_buttons_to_code(OkCancel), DIALOG_BUTTONS_OK_CANCEL_CODE)
+  assert_eq(dialog_buttons_to_code(YesNo), DIALOG_BUTTONS_YES_NO_CODE)
+  assert_eq(
+    dialog_buttons_to_code(YesNoCancel),
+    DIALOG_BUTTONS_YES_NO_CANCEL_CODE,
+  )
+}
+
+///|
+test "invalid backend and response codes are rejected" {
+  assert_eq(backend_from_code(99), None)
+  assert_eq(response_from_success(SUCCESS_RESPONSE_STRIDE * 4), None)
+}
+
+///|
+test "failure status decoding rejects non-failure and unknown backend codes" {
+  assert_eq(decode_failure_status(-12345), None)
+  assert_eq(
+    decode_failure_status(
+      -(NATIVE_FAILURE_BASE + 6 * NATIVE_FAILURE_STRIDE + 17),
+    ),
+    None,
+  )
+}
+
+///|
+test "dialog outcome decoder rejects malformed payloads" {
+  assert_eq(decode_dialog_outcome(Linux, 6), Err(UnsupportedPlatform(Linux)))
+  assert_eq(
+    decode_dialog_outcome(MacOS, SUCCESS_RESPONSE_STRIDE * 4),
+    Err(UnsupportedPlatform(MacOS)),
+  )
+  assert_eq(
+    decode_dialog_outcome(
+      Windows,
+      -(NATIVE_FAILURE_BASE + 6 * NATIVE_FAILURE_STRIDE + 9),
+    ),
+    Err(UnsupportedPlatform(Windows)),
+  )
+}
