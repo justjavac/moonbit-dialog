@@ -1,5 +1,10 @@
 # justjavac/dialog
 
+[![coverage](https://img.shields.io/codecov/c/github/justjavac/moonbit-dialog/main?label=coverage)](https://codecov.io/gh/justjavac/moonbit-dialog)
+[![linux](https://img.shields.io/codecov/c/github/justjavac/moonbit-dialog/main?flag=linux&label=linux)](https://codecov.io/gh/justjavac/moonbit-dialog)
+[![macos](https://img.shields.io/codecov/c/github/justjavac/moonbit-dialog/main?flag=macos&label=macos)](https://codecov.io/gh/justjavac/moonbit-dialog)
+[![windows](https://img.shields.io/codecov/c/github/justjavac/moonbit-dialog/main?flag=windows&label=windows)](https://codecov.io/gh/justjavac/moonbit-dialog)
+
 Native-only dialogs and path pickers for MoonBit.
 
 - Windows uses Win32 message and file dialogs.
