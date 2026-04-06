@@ -51,3 +51,10 @@ let save_dialog = @dialog.SaveFileDialog::new(file_name="report")
   .with_filters(filters)
   .with_default_extension("txt")
 ```
+
+```mbt
+let open_many = @dialog.OpenFilesDialog::new(directory="C:/Projects")
+  .with_filters([
+    @dialog.FileFilter::new("Sources", ["*.mbt", "*.c", "*.h"]),
+  ])
+```

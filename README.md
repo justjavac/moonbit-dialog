@@ -144,6 +144,23 @@ match @dialog.SaveFileDialog::new(file_name="report")
 }
 ```
 
+If you need several files at once, use `OpenFilesDialog` or `open_files`:
+
+```moonbit
+match @dialog.OpenFilesDialog::new(directory="C:/Projects")
+  .with_filters([
+    @dialog.FileFilter::new("Sources", ["*.mbt", "*.c", "*.h"]),
+  ])
+  .show() {
+  Ok(outcome) =>
+    match outcome.selection {
+      Selected(paths) => println("Picked \{paths.length()} files")
+      Cancelled => println("User cancelled the picker")
+    }
+  Err(error) => println("Dialog failed: \{error}")
+}
+```
+
 ## Backend Strategy
 
 This first version chooses the smallest dependable implementation on each platform:
@@ -171,6 +188,8 @@ The package currently exposes:
 - `DialogOutcome`
 - `DialogLabels`
 - `FileFilter`
+- `MultiPathSelection`
+- `MultiPathDialogOutcome`
 - `PathDialogSelection`
 - `PathDialogOutcome`
 - `DialogError`
@@ -178,6 +197,7 @@ The package currently exposes:
 - `ConfirmDialog`
 - `ChoiceDialog`
 - `OpenFileDialog`
+- `OpenFilesDialog`
 - `SaveFileDialog`
 - `SelectFolderDialog`
 - `current_platform()`
@@ -191,6 +211,7 @@ The package currently exposes:
 - `show_ok_cancel(message, title?, level?)`
 - `ask_yes_no_cancel(message, title?, level?)`
 - `open_file(title?, directory?)`
+- `open_files(title?, directory?)`
 - `save_file(title?, directory?, file_name?)`
 - `select_folder(title?, directory?)`
 
@@ -227,7 +248,7 @@ moon coverage analyze -p justjavac/dialog -- -f cobertura -o coverage.xml
 ## Scope of This Version
 
 This version now covers message dialogs, confirmation dialogs, standard button
-sets, filtered path pickers, and save-time default extensions.
+sets, filtered single/multi path pickers, and save-time default extensions.
 
 Planned future work can build on the same structure to add:
 
