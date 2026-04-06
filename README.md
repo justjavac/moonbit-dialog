@@ -15,6 +15,7 @@
 - Yes/no confirmation dialogs with explicit responses
 - Generic standard-button dialogs (`Ok`, `OkCancel`, `YesNo`, `YesNoCancel`)
 - Open-file, save-file, and folder-selection dialogs
+- File filters and save default extensions for path dialogs
 - Best-effort custom button labels with backend capability checks
 - Small public API focused on readability
 - Detailed public API documentation in source
@@ -121,6 +122,28 @@ match @dialog.open_file(directory="C:/Projects") {
 }
 ```
 
+Open and save dialogs can also carry named filters, and save dialogs can append
+a default extension when the chosen path has none:
+
+```moonbit
+let text_filters = [
+  @dialog.FileFilter::new("Text Files", ["*.txt", "*.md"]),
+  @dialog.FileFilter::new("All Files", ["*"]),
+]
+
+match @dialog.SaveFileDialog::new(file_name="report")
+  .with_filters(text_filters)
+  .with_default_extension("txt")
+  .show() {
+  Ok(outcome) =>
+    match outcome.selection {
+      Selected(path) => println("Saving to \{path}")
+      Cancelled => println("User cancelled the picker")
+    }
+  Err(error) => println("Dialog failed: \{error}")
+}
+```
+
 ## Backend Strategy
 
 This first version chooses the smallest dependable implementation on each platform:
@@ -130,6 +153,11 @@ This first version chooses the smallest dependable implementation on each platfo
 - Linux: `zenity`, then `kdialog`, with `xmessage` reserved for message dialogs
 
 Linux desktop stacks vary a lot, so the library tries several common tools in a predictable order. If none are installed, the API returns `Err(BackendUnavailable(Linux))`.
+
+Path dialog filters are best-effort across backends. Windows applies native
+file filters directly, Linux forwards them to `zenity` and a conservative
+`kdialog` fallback, and the current AppleScript path uses extension/UTI-style
+open filters plus save-time default extensions.
 
 ## Public API
 
@@ -142,6 +170,7 @@ The package currently exposes:
 - `DialogResponse`
 - `DialogOutcome`
 - `DialogLabels`
+- `FileFilter`
 - `PathDialogSelection`
 - `PathDialogOutcome`
 - `DialogError`
@@ -198,7 +227,7 @@ moon coverage analyze -p justjavac/dialog -- -f cobertura -o coverage.xml
 ## Scope of This Version
 
 This version now covers message dialogs, confirmation dialogs, standard button
-sets, and basic path pickers.
+sets, filtered path pickers, and save-time default extensions.
 
 Planned future work can build on the same structure to add:
 

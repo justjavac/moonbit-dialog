@@ -40,3 +40,14 @@ match @dialog.open_file(directory="C:/Projects") {
   Err(error) => ignore(error)
 }
 ```
+
+```mbt
+let filters = [
+  @dialog.FileFilter::new("Text Files", ["*.txt", "*.md"]),
+  @dialog.FileFilter::new("All Files", ["*"]),
+]
+
+let save_dialog = @dialog.SaveFileDialog::new(file_name="report")
+  .with_filters(filters)
+  .with_default_extension("txt")
+```
