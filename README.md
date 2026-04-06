@@ -218,13 +218,19 @@ The package currently exposes:
 The API returns typed `Result` values so callers can tell success, cancellation,
 and backend failures apart without guessing.
 
-## Running the Example
+## Running the Examples
 
-The example lives in a separate MoonBit submodule so the main package can keep `src/` as its source root.
+The examples live in a separate MoonBit submodule so the main package can keep `src/` as its source root.
 
 ```bash
 moon -C examples run message
+moon -C examples run confirm
+moon -C examples run choice
+moon -C examples run paths
+moon -C examples run open_files
 ```
+
+See [`examples/README.md`](./examples/README.md) for the short guide to what each example demonstrates.
 
 ## Testing
 
