@@ -1,6 +1,6 @@
 # justjavac/dialog
 
-Native-only message dialogs for MoonBit.
+Native-only message dialogs for MoonBit with severity levels.
 
 - Windows uses Win32 `MessageBoxW`.
 - macOS uses a CoreFoundation notification API.
@@ -10,5 +10,6 @@ Native-only message dialogs for MoonBit.
 let dialog = @dialog.MessageDialog::new(
   "Build finished successfully.",
   title="moonbit-dialog",
+  level=Info,
 )
 ```

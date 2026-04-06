@@ -4,7 +4,13 @@ package "justjavac/dialog"
 // Values
 pub fn current_platform() -> Platform
 
-pub fn show_message(StringView, title? : StringView) -> Result[DialogBackend, DialogError]
+pub fn show_error(StringView, title? : StringView) -> Result[DialogBackend, DialogError]
+
+pub fn show_info(StringView, title? : StringView) -> Result[DialogBackend, DialogError]
+
+pub fn show_message(StringView, title? : StringView, level? : DialogLevel) -> Result[DialogBackend, DialogError]
+
+pub fn show_warning(StringView, title? : StringView) -> Result[DialogBackend, DialogError]
 
 // Errors
 
@@ -23,11 +29,19 @@ pub(all) enum DialogError {
   BackendFailed(DialogBackend, Int)
 } derive(Eq, Show)
 
+pub(all) enum DialogLevel {
+  Info
+  Warning
+  Error
+  Question
+} derive(Eq, Show)
+
 pub struct MessageDialog {
   title : String
   message : String
+  level : DialogLevel
 } derive(Eq, Show)
-pub fn MessageDialog::new(StringView, title? : StringView) -> Self
+pub fn MessageDialog::new(StringView, title? : StringView, level? : DialogLevel) -> Self
 pub fn MessageDialog::show(Self) -> Result[DialogBackend, DialogError]
 
 pub(all) enum Platform {

@@ -1,7 +1,15 @@
 ///|
-/// Show a native message dialog and return a backend or failure code.
-#borrow(title, message)
-extern "c" fn show_message_ffi(title : Bytes, message : Bytes) -> Int = "moonbit_dialog_show_message"
+/// Show a native dialog and return an encoded success or failure code.
+#borrow(title, message, accept_label, reject_label, cancel_label)
+extern "c" fn show_dialog_ffi(
+  level : Int,
+  buttons : Int,
+  title : Bytes,
+  message : Bytes,
+  accept_label : Bytes,
+  reject_label : Bytes,
+  cancel_label : Bytes,
+) -> Int = "moonbit_dialog_show_dialog"
 
 ///|
 const BACKEND_UNAVAILABLE_STATUS : Int = -1
@@ -16,9 +24,26 @@ const NATIVE_FAILURE_BASE : Int = 1000000
 const NATIVE_FAILURE_STRIDE : Int = 100000
 
 ///|
+const SUCCESS_RESPONSE_STRIDE : Int = 10
+
+///|
+const DIALOG_BUTTONS_OK_CODE : Int = 0
+
+///|
 /// Encode a MoonBit string as UTF-8 bytes for native APIs.
 fn encode_utf8_bytes(text : String) -> Bytes {
   @utf8.encode(text[:])
+}
+
+///|
+/// Convert a public level enum into the native FFI code.
+fn dialog_level_to_code(level : DialogLevel) -> Int {
+  match level {
+    Info => 0
+    Warning => 1
+    Error => 2
+    Question => 3
+  }
 }
 
 ///|
@@ -32,6 +57,12 @@ fn backend_from_code(code : Int) -> DialogBackend? {
     4 => Some(LinuxXMessage)
     _ => None
   }
+}
+
+///|
+/// Decode the backend part of a successful native result.
+fn backend_from_success(raw : Int) -> DialogBackend? {
+  backend_from_code(raw % SUCCESS_RESPONSE_STRIDE)
 }
 
 ///|
@@ -49,8 +80,8 @@ fn decode_failure_status(raw : Int) -> (DialogBackend, Int)? {
 }
 
 ///|
-/// Decode a raw native dialog status into the public result type.
-fn decode_native_result(
+/// Decode a raw native dialog status into a backend-only public result.
+fn decode_backend_result(
   platform : Platform,
   raw : Int,
 ) -> Result[DialogBackend, DialogError] {
@@ -58,14 +89,15 @@ fn decode_native_result(
     Err(BackendUnavailable(platform))
   } else if raw == UNSUPPORTED_PLATFORM_STATUS {
     Err(UnsupportedPlatform(platform))
-  } else {
-    match backend_from_code(raw) {
+  } else if raw >= 0 {
+    match backend_from_success(raw) {
       Some(backend) => Ok(backend)
-      None =>
-        match decode_failure_status(raw) {
-          Some((backend, detail)) => Err(BackendFailed(backend, detail))
-          None => Err(UnsupportedPlatform(platform))
-        }
+      None => Err(UnsupportedPlatform(platform))
+    }
+  } else {
+    match decode_failure_status(raw) {
+      Some((backend, detail)) => Err(BackendFailed(backend, detail))
+      None => Err(UnsupportedPlatform(platform))
     }
   }
 }

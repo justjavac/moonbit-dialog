@@ -24,6 +24,18 @@ pub(all) enum DialogBackend {
 } derive(Eq, Show)
 
 ///|
+/// The requested severity or intent of a dialog.
+///
+/// Backends map these levels to the closest native icon or emphasis style they
+/// support.
+pub(all) enum DialogLevel {
+  Info
+  Warning
+  Error
+  Question
+} derive(Eq, Show)
+
+///|
 /// Errors returned when a dialog cannot be shown.
 ///
 /// - `UnsupportedPlatform` means the current OS is outside the current scope.
@@ -43,4 +55,5 @@ pub(all) enum DialogError {
 pub struct MessageDialog {
   title : String
   message : String
+  level : DialogLevel
 } derive(Eq, Show)

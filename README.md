@@ -11,6 +11,7 @@
 
 - Native-only MoonBit package
 - Windows, macOS, and Linux support
+- Info, warning, error, and question dialog levels
 - Small public API focused on readability
 - Detailed public API documentation in source
 - Coverage-aware tests plus Codecov badges
@@ -28,6 +29,7 @@ Add the package to your MoonBit module and import `justjavac/dialog`.
 let result = @dialog.show_message(
   "Hello from MoonBit!",
   title="moonbit-dialog",
+  level=Warning,
 )
 
 match result {
@@ -42,12 +44,20 @@ If you prefer an explicit value object, use `MessageDialog`:
 let dialog = @dialog.MessageDialog::new(
   "Build finished successfully.",
   title="moonbit-dialog",
+  level=Info,
 )
 
 match dialog.show() {
   Ok(backend) => println("Dialog shown with \{backend}")
   Err(error) => println("Dialog failed: \{error}")
 }
+```
+
+There are also convenience helpers for common severity levels:
+
+```moonbit
+ignore(@dialog.show_warning("Configuration file is missing."))
+ignore(@dialog.show_error("Build failed."))
 ```
 
 ## Backend Strategy
@@ -66,10 +76,14 @@ The package currently exposes:
 
 - `Platform`
 - `DialogBackend`
+- `DialogLevel`
 - `DialogError`
 - `MessageDialog`
 - `current_platform()`
-- `show_message(message, title?)`
+- `show_message(message, title?, level?)`
+- `show_info(message, title?)`
+- `show_warning(message, title?)`
+- `show_error(message, title?)`
 
 The API returns `Result[DialogBackend, DialogError]` so callers can handle missing backends or backend failures without guessing.
 
@@ -108,7 +122,6 @@ Planned future work can build on the same structure to add:
 
 - confirmation dialogs
 - custom button sets
-- icons and severity levels
 - richer Linux backend detection
 - native platform bindings where they improve behavior
 

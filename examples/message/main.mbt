@@ -1,10 +1,8 @@
 fn main {
-  let dialog = @dialog.MessageDialog::new(
+  match @dialog.show_warning(
     "Hello from the moonbit-dialog example.",
     title="moonbit-dialog",
-  )
-
-  match dialog.show() {
+  ) {
     Ok(backend) => println("Dialog shown with \{backend}")
     Err(error) => println("Dialog failed: \{error}")
   }

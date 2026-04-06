@@ -2,12 +2,13 @@
 /// Create a message dialog request.
 ///
 /// `title` defaults to `"Message"` so callers can use the short form when only
-/// the message body matters.
+/// the message body matters. `level` defaults to `Info`.
 pub fn MessageDialog::new(
   message : StringView,
   title? : StringView = "Message",
+  level? : DialogLevel = Info,
 ) -> MessageDialog {
-  { title: title.to_string(), message: message.to_string() }
+  { title: title.to_string(), message: message.to_string(), level }
 }
 
 ///|
@@ -28,11 +29,16 @@ pub fn MessageDialog::show(
   if platform == Unknown {
     return Err(UnsupportedPlatform(Unknown))
   }
-  let raw_result = show_message_ffi(
+  let raw_result = show_dialog_ffi(
+    dialog_level_to_code(self.level),
+    DIALOG_BUTTONS_OK_CODE,
     encode_utf8_bytes(self.title),
     encode_utf8_bytes(self.message),
+    encode_utf8_bytes(""),
+    encode_utf8_bytes(""),
+    encode_utf8_bytes(""),
   )
-  decode_native_result(platform, raw_result)
+  decode_backend_result(platform, raw_result)
 }
 
 ///|
@@ -51,6 +57,34 @@ pub fn current_platform() -> Platform {
 pub fn show_message(
   message : StringView,
   title? : StringView = "Message",
+  level? : DialogLevel = Info,
 ) -> Result[DialogBackend, DialogError] {
-  MessageDialog::new(message, title~).show()
+  MessageDialog::new(message, title~, level~).show()
+}
+
+///|
+/// Show an informational dialog using the `Info` level.
+pub fn show_info(
+  message : StringView,
+  title? : StringView = "Information",
+) -> Result[DialogBackend, DialogError] {
+  show_message(message, title~, level=Info)
+}
+
+///|
+/// Show a warning dialog using the `Warning` level.
+pub fn show_warning(
+  message : StringView,
+  title? : StringView = "Warning",
+) -> Result[DialogBackend, DialogError] {
+  show_message(message, title~, level=Warning)
+}
+
+///|
+/// Show an error dialog using the `Error` level.
+pub fn show_error(
+  message : StringView,
+  title? : StringView = "Error",
+) -> Result[DialogBackend, DialogError] {
+  show_message(message, title~, level=Error)
 }

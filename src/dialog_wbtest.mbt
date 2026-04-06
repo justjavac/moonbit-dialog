@@ -1,5 +1,5 @@
 ///|
-fn backend_success_status(backend : DialogBackend) -> Int {
+fn success_status_for_test(backend : DialogBackend) -> Int {
   match backend {
     WindowsWin32 => 0
     MacOSCoreFoundation => 1
@@ -19,44 +19,44 @@ fn failure_status(backend : DialogBackend, detail : Int) -> Int {
     detail
   }
   -(NATIVE_FAILURE_BASE +
-  backend_success_status(backend) * NATIVE_FAILURE_STRIDE +
+  success_status_for_test(backend) * NATIVE_FAILURE_STRIDE +
   detail)
 }
 
 ///|
 test "backend codes round-trip through the decoder" {
   assert_eq(
-    backend_from_code(backend_success_status(WindowsWin32)),
+    backend_from_code(success_status_for_test(WindowsWin32)),
     Some(WindowsWin32),
   )
   assert_eq(
-    backend_from_code(backend_success_status(MacOSCoreFoundation)),
+    backend_from_code(success_status_for_test(MacOSCoreFoundation)),
     Some(MacOSCoreFoundation),
   )
   assert_eq(
-    backend_from_code(backend_success_status(LinuxZenity)),
+    backend_from_code(success_status_for_test(LinuxZenity)),
     Some(LinuxZenity),
   )
   assert_eq(
-    backend_from_code(backend_success_status(LinuxKDialog)),
+    backend_from_code(success_status_for_test(LinuxKDialog)),
     Some(LinuxKDialog),
   )
   assert_eq(
-    backend_from_code(backend_success_status(LinuxXMessage)),
+    backend_from_code(success_status_for_test(LinuxXMessage)),
     Some(LinuxXMessage),
   )
 }
 
 ///|
 test "unknown platforms are rejected" {
-  let result = decode_native_result(Unknown, UNSUPPORTED_PLATFORM_STATUS)
+  let result = decode_backend_result(Unknown, UNSUPPORTED_PLATFORM_STATUS)
   assert_true(result is Err(UnsupportedPlatform(Unknown)))
 }
 
 ///|
 test "backend unavailable status maps to the public error" {
   assert_eq(
-    decode_native_result(Linux, BACKEND_UNAVAILABLE_STATUS),
+    decode_backend_result(Linux, BACKEND_UNAVAILABLE_STATUS),
     Err(BackendUnavailable(Linux)),
   )
 }
@@ -64,22 +64,25 @@ test "backend unavailable status maps to the public error" {
 ///|
 test "success statuses map to the right backend" {
   assert_eq(
-    decode_native_result(Windows, backend_success_status(WindowsWin32)),
+    decode_backend_result(Windows, success_status_for_test(WindowsWin32)),
     Ok(WindowsWin32),
   )
   assert_eq(
-    decode_native_result(MacOS, backend_success_status(MacOSCoreFoundation)),
+    decode_backend_result(MacOS, success_status_for_test(MacOSCoreFoundation)),
     Ok(MacOSCoreFoundation),
   )
   assert_eq(
-    decode_native_result(Linux, backend_success_status(LinuxXMessage)),
+    decode_backend_result(Linux, success_status_for_test(LinuxXMessage)),
     Ok(LinuxXMessage),
   )
 }
 
 ///|
 test "failure statuses keep backend and detail" {
-  let result = decode_native_result(Windows, failure_status(WindowsWin32, 1234))
+  let result = decode_backend_result(
+    Windows,
+    failure_status(WindowsWin32, 1234),
+  )
   assert_eq(result, Err(BackendFailed(WindowsWin32, 1234)))
 }
 
