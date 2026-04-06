@@ -1,6 +1,6 @@
 ///|
 test "run_path_dialog_request can decode callback-generated cancellations" {
-  let result = run_path_dialog_request(path_out => {
+  let result = run_path_dialog_request_for_platform(Windows, path_out => {
     ignore(path_out.length())
     success_status_for_test(WindowsWin32, response=Cancel)
   })
@@ -76,7 +76,7 @@ test "path list encoding keeps separators round-trippable" {
 
 ///|
 test "run_multi_path_dialog_request can decode callback-generated cancellations" {
-  let result = run_multi_path_dialog_request(path_out => {
+  let result = run_multi_path_dialog_request_for_platform(Linux, path_out => {
     ignore(path_out.length())
     success_status_for_test(LinuxZenity, response=Cancel)
   })

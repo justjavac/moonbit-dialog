@@ -37,16 +37,24 @@ fn decode_multi_path_dialog_outcome(
 }
 
 ///|
+/// Run a multi-path dialog callback for a known platform and decode the result.
+fn run_multi_path_dialog_request_for_platform(
+  platform : Platform,
+  callback : (Bytes) -> Int,
+) -> Result[MultiPathDialogOutcome, DialogError] {
+  let path_out = Bytes::new(MULTI_PATH_DIALOG_BUFFER_SIZE)
+  let raw_result = callback(path_out)
+  decode_multi_path_dialog_outcome(platform, raw_result, path_out)
+}
+
+///|
 /// Run a multi-path dialog callback and decode its raw native result.
 fn run_multi_path_dialog_request(
   callback : (Bytes) -> Int,
 ) -> Result[MultiPathDialogOutcome, DialogError] {
   match supported_platform_result() {
-    Ok(platform) => {
-      let path_out = Bytes::new(MULTI_PATH_DIALOG_BUFFER_SIZE)
-      let raw_result = callback(path_out)
-      decode_multi_path_dialog_outcome(platform, raw_result, path_out)
-    }
+    Ok(platform) =>
+      run_multi_path_dialog_request_for_platform(platform, callback)
     Err(error) => Err(error)
   }
 }
