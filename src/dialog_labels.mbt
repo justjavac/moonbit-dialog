@@ -50,6 +50,7 @@ pub fn supports_custom_labels(backend : DialogBackend) -> Bool {
   match backend {
     WindowsWin32 => false
     MacOSCoreFoundation => true
+    MacOSAppleScript => false
     LinuxZenity => true
     LinuxKDialog => false
     LinuxXMessage => true

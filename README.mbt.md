@@ -1,10 +1,10 @@
 # justjavac/dialog
 
-Native-only message and confirmation dialogs for MoonBit with severity levels.
+Native-only dialogs and path pickers for MoonBit.
 
-- Windows uses Win32 `MessageBoxW`.
-- macOS uses a CoreFoundation notification API.
-- Linux tries `zenity`, then `kdialog`, then `xmessage` via direct process spawning.
+- Windows uses Win32 message and file dialogs.
+- macOS uses CoreFoundation alerts and AppleScript path pickers.
+- Linux tries `zenity`, then `kdialog`, then `xmessage` for message dialogs.
 
 ```mbt
 let dialog = @dialog.MessageDialog::new(
@@ -32,4 +32,11 @@ let choice = @dialog.ChoiceDialog::new(
 let relabeled = @dialog.MessageDialog::new(
   "Build finished successfully.",
 ).with_labels(@dialog.DialogLabels::ok("Open report"))
+```
+
+```mbt
+match @dialog.open_file(directory="C:/Projects") {
+  Ok(outcome) => ignore(outcome)
+  Err(error) => ignore(error)
+}
 ```

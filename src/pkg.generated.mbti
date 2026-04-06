@@ -8,6 +8,12 @@ pub fn ask_yes_no_cancel(StringView, title? : StringView, level? : DialogLevel) 
 
 pub fn current_platform() -> Platform
 
+pub fn open_file(title? : StringView, directory? : StringView) -> Result[PathDialogOutcome, DialogError]
+
+pub fn save_file(title? : StringView, directory? : StringView, file_name? : StringView) -> Result[PathDialogOutcome, DialogError]
+
+pub fn select_folder(title? : StringView, directory? : StringView) -> Result[PathDialogOutcome, DialogError]
+
 pub fn show_dialog(StringView, title? : StringView, buttons? : DialogButtons, level? : DialogLevel) -> Result[DialogOutcome, DialogError]
 
 pub fn show_error(StringView, title? : StringView) -> Result[DialogBackend, DialogError]
@@ -49,6 +55,7 @@ pub fn ConfirmDialog::with_labels(Self, DialogLabels) -> Self
 pub(all) enum DialogBackend {
   WindowsWin32
   MacOSCoreFoundation
+  MacOSAppleScript
   LinuxZenity
   LinuxKDialog
   LinuxXMessage
@@ -107,12 +114,44 @@ pub fn MessageDialog::new(StringView, title? : StringView, level? : DialogLevel)
 pub fn MessageDialog::show(Self) -> Result[DialogBackend, DialogError]
 pub fn MessageDialog::with_labels(Self, DialogLabels) -> Self
 
+pub struct OpenFileDialog {
+  title : String
+  directory : String
+} derive(Eq, Show)
+pub fn OpenFileDialog::new(title? : StringView, directory? : StringView) -> Self
+pub fn OpenFileDialog::show(Self) -> Result[PathDialogOutcome, DialogError]
+
+pub struct PathDialogOutcome {
+  backend : DialogBackend
+  selection : PathDialogSelection
+} derive(Eq, Show)
+
+pub(all) enum PathDialogSelection {
+  Selected(String)
+  Cancelled
+} derive(Eq, Show)
+
 pub(all) enum Platform {
   Windows
   MacOS
   Linux
   Unknown
 } derive(Eq, Show)
+
+pub struct SaveFileDialog {
+  title : String
+  directory : String
+  file_name : String
+} derive(Eq, Show)
+pub fn SaveFileDialog::new(title? : StringView, directory? : StringView, file_name? : StringView) -> Self
+pub fn SaveFileDialog::show(Self) -> Result[PathDialogOutcome, DialogError]
+
+pub struct SelectFolderDialog {
+  title : String
+  directory : String
+} derive(Eq, Show)
+pub fn SelectFolderDialog::new(title? : StringView, directory? : StringView) -> Self
+pub fn SelectFolderDialog::show(Self) -> Result[PathDialogOutcome, DialogError]
 
 // Type aliases
 

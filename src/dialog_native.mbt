@@ -39,9 +39,57 @@ const DIALOG_BUTTONS_YES_NO_CODE : Int = 2
 const DIALOG_BUTTONS_YES_NO_CANCEL_CODE : Int = 3
 
 ///|
-/// Encode a MoonBit string as UTF-8 bytes for native APIs.
+/// Encode a MoonBit string as a NUL-terminated UTF-8 byte buffer for FFI.
 fn encode_utf8_bytes(text : String) -> Bytes {
-  @utf8.encode(text[:])
+  let encoded = @utf8.encode(text[:])
+  let len = encoded.length()
+  Bytes::makei(len + 1, i => if i < len { encoded[i] } else { b'\x00' })
+}
+
+///|
+/// Decode a NUL-terminated UTF-8 byte buffer into a MoonBit string.
+fn utf8_bytes_to_mbt_string(bytes : Bytes) -> String {
+  let res = StringBuilder::new()
+  let len = bytes.length()
+  let mut i = 0
+  while i < len {
+    let mut c = bytes[i].to_int()
+    if c == 0 {
+      break
+    } else if c < 0x80 {
+      res.write_char(c.unsafe_to_char())
+      i += 1
+    } else if c < 0xE0 {
+      if i + 1 >= len {
+        break
+      }
+      c = ((c & 0x1F) << 6) | (bytes[i + 1].to_int() & 0x3F)
+      res.write_char(c.unsafe_to_char())
+      i += 2
+    } else if c < 0xF0 {
+      if i + 2 >= len {
+        break
+      }
+      c = ((c & 0x0F) << 12) |
+        ((bytes[i + 1].to_int() & 0x3F) << 6) |
+        (bytes[i + 2].to_int() & 0x3F)
+      res.write_char(c.unsafe_to_char())
+      i += 3
+    } else {
+      if i + 3 >= len {
+        break
+      }
+      c = ((c & 0x07) << 18) |
+        ((bytes[i + 1].to_int() & 0x3F) << 12) |
+        ((bytes[i + 2].to_int() & 0x3F) << 6) |
+        (bytes[i + 3].to_int() & 0x3F)
+      c -= 0x10000
+      res.write_char(((c >> 10) + 0xD800).unsafe_to_char())
+      res.write_char(((c & 0x3FF) + 0xDC00).unsafe_to_char())
+      i += 4
+    }
+  }
+  res.to_string()
 }
 
 ///|
@@ -72,9 +120,10 @@ fn backend_from_code(code : Int) -> DialogBackend? {
   match code {
     0 => Some(WindowsWin32)
     1 => Some(MacOSCoreFoundation)
-    2 => Some(LinuxZenity)
-    3 => Some(LinuxKDialog)
-    4 => Some(LinuxXMessage)
+    2 => Some(MacOSAppleScript)
+    3 => Some(LinuxZenity)
+    4 => Some(LinuxKDialog)
+    5 => Some(LinuxXMessage)
     _ => None
   }
 }

@@ -7,9 +7,19 @@
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <commdlg.h>
+#include <shlobj.h>
+#include <wchar.h>
 #pragma comment(lib, "user32.lib")
+#pragma comment(lib, "comdlg32.lib")
+#pragma comment(lib, "shell32.lib")
+#pragma comment(lib, "ole32.lib")
 #elif defined(__APPLE__)
 #include <dlfcn.h>
+#include <errno.h>
+#include <spawn.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #elif defined(__linux__)
 #include <errno.h>
 #include <spawn.h>
@@ -19,9 +29,10 @@
 
 #define DIALOG_BACKEND_WINDOWS_WIN32 0
 #define DIALOG_BACKEND_MACOS_CORE_FOUNDATION 1
-#define DIALOG_BACKEND_LINUX_ZENITY 2
-#define DIALOG_BACKEND_LINUX_KDIALOG 3
-#define DIALOG_BACKEND_LINUX_XMESSAGE 4
+#define DIALOG_BACKEND_MACOS_APPLE_SCRIPT 2
+#define DIALOG_BACKEND_LINUX_ZENITY 3
+#define DIALOG_BACKEND_LINUX_KDIALOG 4
+#define DIALOG_BACKEND_LINUX_XMESSAGE 5
 
 #define DIALOG_LEVEL_INFO 0
 #define DIALOG_LEVEL_WARNING 1
@@ -46,6 +57,9 @@
 #define DIALOG_FAILURE_BASE 1000000
 #define DIALOG_FAILURE_STRIDE 100000
 
+#define DIALOG_HELPER_MISSING -32768
+#define DIALOG_APPLESCRIPT_CANCELLED "__MOONBIT_DIALOG_CANCELLED__"
+
 static int32_t moonbit_dialog_encode_success(
   int32_t backend,
   int32_t response
@@ -63,8 +77,100 @@ static int32_t moonbit_dialog_encode_failure(int32_t backend, int32_t detail) {
   return -(DIALOG_FAILURE_BASE + backend * DIALOG_FAILURE_STRIDE + detail);
 }
 
-static int moonbit_dialog_has_label(const char* text) {
+static int moonbit_dialog_has_text(const char* text) {
   return text != NULL && text[0] != '\0';
+}
+
+static int moonbit_dialog_has_label(const char* text) {
+  return moonbit_dialog_has_text(text);
+}
+
+static void moonbit_dialog_clear_output(
+  moonbit_bytes_t output,
+  int32_t output_len
+) {
+  if (output_len > 0) {
+    output[0] = 0;
+  }
+}
+
+static int moonbit_dialog_copy_utf8_to_output(
+  const char* text,
+  moonbit_bytes_t output,
+  int32_t output_len
+) {
+  moonbit_dialog_clear_output(output, output_len);
+  if (output_len <= 0) {
+    return 0;
+  }
+  if (text == NULL) {
+    return 1;
+  }
+
+  size_t text_len = strlen(text);
+  if ((size_t)output_len <= text_len) {
+    return 0;
+  }
+
+  memcpy(output, text, text_len + 1);
+  return 1;
+}
+
+static char* moonbit_dialog_dup_text(const char* text) {
+  size_t len = strlen(text);
+  char* result = (char*)malloc(len + 1);
+  if (result == NULL) {
+    return NULL;
+  }
+  memcpy(result, text, len + 1);
+  return result;
+}
+
+static char* moonbit_dialog_make_start_path(
+  const char* directory,
+  const char* file_name,
+  int trailing_separator_for_directory
+) {
+  int has_directory = moonbit_dialog_has_text(directory);
+  int has_file_name = moonbit_dialog_has_text(file_name);
+  if (!has_directory && !has_file_name) {
+    return NULL;
+  }
+
+  if (!has_directory) {
+    return moonbit_dialog_dup_text(file_name);
+  }
+
+  size_t directory_len = strlen(directory);
+  size_t file_name_len = has_file_name ? strlen(file_name) : 0;
+  int needs_separator =
+    has_file_name &&
+    directory[directory_len - 1] != '/' &&
+    directory[directory_len - 1] != '\\';
+  int needs_trailing_separator =
+    !has_file_name &&
+    trailing_separator_for_directory &&
+    directory[directory_len - 1] != '/' &&
+    directory[directory_len - 1] != '\\';
+  size_t total =
+    directory_len + (size_t)needs_separator + (size_t)needs_trailing_separator +
+    file_name_len + 1;
+  char* result = (char*)malloc(total);
+  if (result == NULL) {
+    return NULL;
+  }
+
+  memcpy(result, directory, directory_len);
+  size_t offset = directory_len;
+  if (needs_separator || needs_trailing_separator) {
+    result[offset++] = '/';
+  }
+  if (has_file_name) {
+    memcpy(result + offset, file_name, file_name_len);
+    offset += file_name_len;
+  }
+  result[offset] = '\0';
+  return result;
 }
 
 static const char* moonbit_dialog_pick_label(
@@ -86,6 +192,130 @@ static const char* moonbit_dialog_accept_label(
       return moonbit_dialog_pick_label(custom, "OK");
   }
 }
+
+#if defined(__APPLE__) || defined(__linux__)
+extern char** environ;
+
+static int moonbit_dialog_wait_for_exit(pid_t pid) {
+  int status = 0;
+  if (waitpid(pid, &status, 0) < 0) {
+    return -errno;
+  }
+
+  if (WIFEXITED(status)) {
+    return WEXITSTATUS(status);
+  }
+
+  if (WIFSIGNALED(status)) {
+    return 512 + WTERMSIG(status);
+  }
+
+  return 513;
+}
+
+static int moonbit_dialog_run_program(const char* const argv[]) {
+  pid_t pid = 0;
+  int spawn_status = posix_spawnp(
+    &pid,
+    argv[0],
+    NULL,
+    NULL,
+    (char* const*)argv,
+    environ
+  );
+
+  if (spawn_status == ENOENT) {
+    return DIALOG_HELPER_MISSING;
+  }
+  if (spawn_status != 0) {
+    return -spawn_status;
+  }
+
+  return moonbit_dialog_wait_for_exit(pid);
+}
+
+static void moonbit_dialog_trim_newlines(char* output) {
+  size_t length = strlen(output);
+  while (length > 0) {
+    char current = output[length - 1];
+    if (current != '\n' && current != '\r') {
+      break;
+    }
+    output[length - 1] = '\0';
+    length--;
+  }
+}
+
+static int moonbit_dialog_run_program_capture_stdout(
+  const char* const argv[],
+  moonbit_bytes_t output,
+  int32_t output_len
+) {
+  int pipe_fds[2] = {0, 0};
+  moonbit_dialog_clear_output(output, output_len);
+
+  if (pipe(pipe_fds) != 0) {
+    return -errno;
+  }
+
+  posix_spawn_file_actions_t actions;
+  int action_status = posix_spawn_file_actions_init(&actions);
+  if (action_status != 0) {
+    close(pipe_fds[0]);
+    close(pipe_fds[1]);
+    return -action_status;
+  }
+
+  posix_spawn_file_actions_addclose(&actions, pipe_fds[0]);
+  posix_spawn_file_actions_adddup2(&actions, pipe_fds[1], STDOUT_FILENO);
+  posix_spawn_file_actions_addclose(&actions, pipe_fds[1]);
+
+  pid_t pid = 0;
+  int spawn_status = posix_spawnp(
+    &pid,
+    argv[0],
+    &actions,
+    NULL,
+    (char* const*)argv,
+    environ
+  );
+  posix_spawn_file_actions_destroy(&actions);
+  close(pipe_fds[1]);
+
+  if (spawn_status == ENOENT) {
+    close(pipe_fds[0]);
+    return DIALOG_HELPER_MISSING;
+  }
+  if (spawn_status != 0) {
+    close(pipe_fds[0]);
+    return -spawn_status;
+  }
+
+  if (output_len > 0) {
+    size_t filled = 0;
+    while (filled + 1 < (size_t)output_len) {
+      ssize_t count = read(
+        pipe_fds[0],
+        output + filled,
+        (size_t)output_len - filled - 1
+      );
+      if (count <= 0) {
+        break;
+      }
+      filled += (size_t)count;
+    }
+    output[filled] = '\0';
+    moonbit_dialog_trim_newlines((char*)output);
+  } else {
+    char discard[64];
+    while (read(pipe_fds[0], discard, sizeof(discard)) > 0) {
+    }
+  }
+
+  close(pipe_fds[0]);
+  return moonbit_dialog_wait_for_exit(pid);
+}
+#endif
 
 static const char* moonbit_dialog_reject_label(
   int32_t buttons,
@@ -170,6 +400,51 @@ static wchar_t* moonbit_dialog_utf8_to_wide(const char* text) {
   }
 
   return wide;
+}
+
+static int moonbit_dialog_copy_wide_to_output(
+  const wchar_t* text,
+  moonbit_bytes_t output,
+  int32_t output_len
+) {
+  moonbit_dialog_clear_output(output, output_len);
+  if (output_len <= 0) {
+    return 0;
+  }
+
+  int length = WideCharToMultiByte(CP_UTF8, 0, text, -1, NULL, 0, NULL, NULL);
+  if (length <= 0 || length > output_len) {
+    return 0;
+  }
+
+  return WideCharToMultiByte(
+           CP_UTF8,
+           0,
+           text,
+           -1,
+           (char*)output,
+           output_len,
+           NULL,
+           NULL
+         ) != 0;
+}
+
+static void moonbit_dialog_copy_wide_string(
+  wchar_t* destination,
+  size_t destination_len,
+  const wchar_t* source
+) {
+  size_t i = 0;
+  if (destination_len == 0) {
+    return;
+  }
+  if (source != NULL) {
+    while (i + 1 < destination_len && source[i] != L'\0') {
+      destination[i] = source[i];
+      i++;
+    }
+  }
+  destination[i] = L'\0';
 }
 
 static UINT moonbit_dialog_windows_button_flags(int32_t buttons) {
@@ -276,6 +551,257 @@ static int32_t moonbit_dialog_show_windows(
         result
       );
   }
+}
+
+static int32_t moonbit_dialog_open_file_windows(
+  const char* title_utf8,
+  const char* directory_utf8,
+  moonbit_bytes_t path_out,
+  int32_t path_out_len
+) {
+  wchar_t* title = moonbit_dialog_utf8_to_wide(title_utf8);
+  wchar_t* directory = NULL;
+  if (title == NULL) {
+    DWORD error = GetLastError();
+    return moonbit_dialog_encode_failure(
+      DIALOG_BACKEND_WINDOWS_WIN32,
+      error == 0 ? 11 : (int32_t)error
+    );
+  }
+  if (moonbit_dialog_has_text(directory_utf8)) {
+    directory = moonbit_dialog_utf8_to_wide(directory_utf8);
+    if (directory == NULL) {
+      DWORD error = GetLastError();
+      free(title);
+      return moonbit_dialog_encode_failure(
+        DIALOG_BACKEND_WINDOWS_WIN32,
+        error == 0 ? 12 : (int32_t)error
+      );
+    }
+  }
+
+  wchar_t file_buffer[32768];
+  file_buffer[0] = L'\0';
+
+  OPENFILENAMEW ofn;
+  ZeroMemory(&ofn, sizeof(ofn));
+  ofn.lStructSize = sizeof(ofn);
+  ofn.hwndOwner = NULL;
+  ofn.lpstrFile = file_buffer;
+  ofn.nMaxFile = (DWORD)(sizeof(file_buffer) / sizeof(file_buffer[0]));
+  ofn.lpstrTitle = title;
+  ofn.lpstrInitialDir = directory;
+  ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+
+  BOOL result = GetOpenFileNameW(&ofn);
+  DWORD detail = CommDlgExtendedError();
+  free(directory);
+  free(title);
+
+  if (!result) {
+    if (detail == 0) {
+      moonbit_dialog_clear_output(path_out, path_out_len);
+      return moonbit_dialog_encode_success(
+        DIALOG_BACKEND_WINDOWS_WIN32,
+        DIALOG_RESPONSE_CANCEL
+      );
+    }
+    return moonbit_dialog_encode_failure(
+      DIALOG_BACKEND_WINDOWS_WIN32,
+      (int32_t)detail
+    );
+  }
+
+  if (!moonbit_dialog_copy_wide_to_output(file_buffer, path_out, path_out_len)) {
+    return moonbit_dialog_encode_failure(DIALOG_BACKEND_WINDOWS_WIN32, 13);
+  }
+
+  return moonbit_dialog_encode_success(
+    DIALOG_BACKEND_WINDOWS_WIN32,
+    DIALOG_RESPONSE_OK
+  );
+}
+
+static int32_t moonbit_dialog_save_file_windows(
+  const char* title_utf8,
+  const char* directory_utf8,
+  const char* file_name_utf8,
+  moonbit_bytes_t path_out,
+  int32_t path_out_len
+) {
+  wchar_t* title = moonbit_dialog_utf8_to_wide(title_utf8);
+  wchar_t* directory = NULL;
+  wchar_t* file_name = NULL;
+  if (title == NULL) {
+    DWORD error = GetLastError();
+    return moonbit_dialog_encode_failure(
+      DIALOG_BACKEND_WINDOWS_WIN32,
+      error == 0 ? 21 : (int32_t)error
+    );
+  }
+  if (moonbit_dialog_has_text(directory_utf8)) {
+    directory = moonbit_dialog_utf8_to_wide(directory_utf8);
+    if (directory == NULL) {
+      DWORD error = GetLastError();
+      free(title);
+      return moonbit_dialog_encode_failure(
+        DIALOG_BACKEND_WINDOWS_WIN32,
+        error == 0 ? 22 : (int32_t)error
+      );
+    }
+  }
+  if (moonbit_dialog_has_text(file_name_utf8)) {
+    file_name = moonbit_dialog_utf8_to_wide(file_name_utf8);
+    if (file_name == NULL) {
+      DWORD error = GetLastError();
+      free(directory);
+      free(title);
+      return moonbit_dialog_encode_failure(
+        DIALOG_BACKEND_WINDOWS_WIN32,
+        error == 0 ? 23 : (int32_t)error
+      );
+    }
+  }
+
+  wchar_t file_buffer[32768];
+  moonbit_dialog_copy_wide_string(
+    file_buffer,
+    sizeof(file_buffer) / sizeof(file_buffer[0]),
+    file_name
+  );
+
+  OPENFILENAMEW ofn;
+  ZeroMemory(&ofn, sizeof(ofn));
+  ofn.lStructSize = sizeof(ofn);
+  ofn.hwndOwner = NULL;
+  ofn.lpstrFile = file_buffer;
+  ofn.nMaxFile = (DWORD)(sizeof(file_buffer) / sizeof(file_buffer[0]));
+  ofn.lpstrTitle = title;
+  ofn.lpstrInitialDir = directory;
+  ofn.Flags = OFN_EXPLORER | OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST;
+
+  BOOL result = GetSaveFileNameW(&ofn);
+  DWORD detail = CommDlgExtendedError();
+  free(file_name);
+  free(directory);
+  free(title);
+
+  if (!result) {
+    if (detail == 0) {
+      moonbit_dialog_clear_output(path_out, path_out_len);
+      return moonbit_dialog_encode_success(
+        DIALOG_BACKEND_WINDOWS_WIN32,
+        DIALOG_RESPONSE_CANCEL
+      );
+    }
+    return moonbit_dialog_encode_failure(
+      DIALOG_BACKEND_WINDOWS_WIN32,
+      (int32_t)detail
+    );
+  }
+
+  if (!moonbit_dialog_copy_wide_to_output(file_buffer, path_out, path_out_len)) {
+    return moonbit_dialog_encode_failure(DIALOG_BACKEND_WINDOWS_WIN32, 24);
+  }
+
+  return moonbit_dialog_encode_success(
+    DIALOG_BACKEND_WINDOWS_WIN32,
+    DIALOG_RESPONSE_OK
+  );
+}
+
+static int CALLBACK moonbit_dialog_browse_callback(
+  HWND hwnd,
+  UINT msg,
+  LPARAM lparam,
+  LPARAM data
+) {
+  if (msg == BFFM_INITIALIZED && data != 0) {
+    SendMessageW(hwnd, BFFM_SETSELECTIONW, TRUE, data);
+  }
+  (void)lparam;
+  return 0;
+}
+
+static int32_t moonbit_dialog_select_folder_windows(
+  const char* title_utf8,
+  const char* directory_utf8,
+  moonbit_bytes_t path_out,
+  int32_t path_out_len
+) {
+  wchar_t* title = moonbit_dialog_utf8_to_wide(title_utf8);
+  wchar_t* directory = NULL;
+  if (title == NULL) {
+    DWORD error = GetLastError();
+    return moonbit_dialog_encode_failure(
+      DIALOG_BACKEND_WINDOWS_WIN32,
+      error == 0 ? 31 : (int32_t)error
+    );
+  }
+  if (moonbit_dialog_has_text(directory_utf8)) {
+    directory = moonbit_dialog_utf8_to_wide(directory_utf8);
+    if (directory == NULL) {
+      DWORD error = GetLastError();
+      free(title);
+      return moonbit_dialog_encode_failure(
+        DIALOG_BACKEND_WINDOWS_WIN32,
+        error == 0 ? 32 : (int32_t)error
+      );
+    }
+  }
+
+  wchar_t display_name[MAX_PATH];
+  display_name[0] = L'\0';
+  HRESULT ole_status = OleInitialize(NULL);
+
+  BROWSEINFOW browse_info;
+  ZeroMemory(&browse_info, sizeof(browse_info));
+  browse_info.hwndOwner = NULL;
+  browse_info.pszDisplayName = display_name;
+  browse_info.lpszTitle = title;
+  browse_info.ulFlags = BIF_RETURNONLYFSDIRS | BIF_USENEWUI;
+  browse_info.lpfn = moonbit_dialog_browse_callback;
+  browse_info.lParam = (LPARAM)directory;
+
+  PIDLIST_ABSOLUTE item_id = SHBrowseForFolderW(&browse_info);
+  free(directory);
+  free(title);
+
+  if (item_id == NULL) {
+    if (SUCCEEDED(ole_status)) {
+      OleUninitialize();
+    }
+    moonbit_dialog_clear_output(path_out, path_out_len);
+    return moonbit_dialog_encode_success(
+      DIALOG_BACKEND_WINDOWS_WIN32,
+      DIALOG_RESPONSE_CANCEL
+    );
+  }
+
+  wchar_t selected_path[32768];
+  BOOL ok = SHGetPathFromIDListW(item_id, selected_path);
+  CoTaskMemFree(item_id);
+  if (SUCCEEDED(ole_status)) {
+    OleUninitialize();
+  }
+
+  if (!ok) {
+    return moonbit_dialog_encode_failure(DIALOG_BACKEND_WINDOWS_WIN32, 33);
+  }
+  if (
+    !moonbit_dialog_copy_wide_to_output(
+      selected_path,
+      path_out,
+      path_out_len
+    )
+  ) {
+    return moonbit_dialog_encode_failure(DIALOG_BACKEND_WINDOWS_WIN32, 34);
+  }
+
+  return moonbit_dialog_encode_success(
+    DIALOG_BACKEND_WINDOWS_WIN32,
+    DIALOG_RESPONSE_OK
+  );
 }
 #endif
 
@@ -501,135 +1027,222 @@ static int32_t moonbit_dialog_show_macos(
       );
   }
 }
+
+static int moonbit_dialog_run_osascript(
+  const char* const script_lines[],
+  int script_line_count,
+  const char* const args[],
+  int arg_count,
+  moonbit_bytes_t output,
+  int32_t output_len
+) {
+  int total_args = 1 + script_line_count * 2 + 1 + arg_count + 1;
+  const char** argv = (const char**)malloc((size_t)total_args * sizeof(char*));
+  if (argv == NULL) {
+    return -12;
+  }
+
+  int index = 0;
+  argv[index++] = "osascript";
+  for (int i = 0; i < script_line_count; i++) {
+    argv[index++] = "-e";
+    argv[index++] = script_lines[i];
+  }
+  argv[index++] = "--";
+  for (int i = 0; i < arg_count; i++) {
+    argv[index++] = args[i];
+  }
+  argv[index] = NULL;
+
+  int status = moonbit_dialog_run_program_capture_stdout(argv, output, output_len);
+  free(argv);
+  return status;
+}
+
+static int32_t moonbit_dialog_open_file_macos(
+  const char* title_utf8,
+  const char* directory_utf8,
+  moonbit_bytes_t path_out,
+  int32_t path_out_len
+) {
+  const char* script[] = {
+    "on run argv",
+    "set promptText to item 1 of argv",
+    "set directoryPath to item 2 of argv",
+    "try",
+    "if directoryPath is \"\" then",
+    "return POSIX path of (choose file with prompt promptText)",
+    "else",
+    "return POSIX path of (choose file with prompt promptText default location (POSIX file directoryPath))",
+    "end if",
+    "on error number -128",
+    "return \"" DIALOG_APPLESCRIPT_CANCELLED "\"",
+    "end try",
+    "end run"
+  };
+  const char* args[] = { title_utf8, directory_utf8 };
+  int status = moonbit_dialog_run_osascript(
+    script,
+    (int)(sizeof(script) / sizeof(script[0])),
+    args,
+    (int)(sizeof(args) / sizeof(args[0])),
+    path_out,
+    path_out_len
+  );
+
+  if (status == DIALOG_HELPER_MISSING) {
+    return moonbit_dialog_encode_failure(
+      DIALOG_BACKEND_MACOS_APPLE_SCRIPT,
+      11
+    );
+  }
+  if (status != 0) {
+    return moonbit_dialog_encode_failure(
+      DIALOG_BACKEND_MACOS_APPLE_SCRIPT,
+      status
+    );
+  }
+  if (strcmp((char*)path_out, DIALOG_APPLESCRIPT_CANCELLED) == 0) {
+    moonbit_dialog_clear_output(path_out, path_out_len);
+    return moonbit_dialog_encode_success(
+      DIALOG_BACKEND_MACOS_APPLE_SCRIPT,
+      DIALOG_RESPONSE_CANCEL
+    );
+  }
+
+  return moonbit_dialog_encode_success(
+    DIALOG_BACKEND_MACOS_APPLE_SCRIPT,
+    DIALOG_RESPONSE_OK
+  );
+}
+
+static int32_t moonbit_dialog_save_file_macos(
+  const char* title_utf8,
+  const char* directory_utf8,
+  const char* file_name_utf8,
+  moonbit_bytes_t path_out,
+  int32_t path_out_len
+) {
+  const char* script[] = {
+    "on run argv",
+    "set promptText to item 1 of argv",
+    "set directoryPath to item 2 of argv",
+    "set defaultName to item 3 of argv",
+    "try",
+    "if directoryPath is \"\" then",
+    "if defaultName is \"\" then",
+    "return POSIX path of (choose file name with prompt promptText)",
+    "else",
+    "return POSIX path of (choose file name with prompt promptText default name defaultName)",
+    "end if",
+    "else",
+    "if defaultName is \"\" then",
+    "return POSIX path of (choose file name with prompt promptText default location (POSIX file directoryPath))",
+    "else",
+    "return POSIX path of (choose file name with prompt promptText default location (POSIX file directoryPath) default name defaultName)",
+    "end if",
+    "end if",
+    "on error number -128",
+    "return \"" DIALOG_APPLESCRIPT_CANCELLED "\"",
+    "end try",
+    "end run"
+  };
+  const char* args[] = { title_utf8, directory_utf8, file_name_utf8 };
+  int status = moonbit_dialog_run_osascript(
+    script,
+    (int)(sizeof(script) / sizeof(script[0])),
+    args,
+    (int)(sizeof(args) / sizeof(args[0])),
+    path_out,
+    path_out_len
+  );
+
+  if (status == DIALOG_HELPER_MISSING) {
+    return moonbit_dialog_encode_failure(
+      DIALOG_BACKEND_MACOS_APPLE_SCRIPT,
+      12
+    );
+  }
+  if (status != 0) {
+    return moonbit_dialog_encode_failure(
+      DIALOG_BACKEND_MACOS_APPLE_SCRIPT,
+      status
+    );
+  }
+  if (strcmp((char*)path_out, DIALOG_APPLESCRIPT_CANCELLED) == 0) {
+    moonbit_dialog_clear_output(path_out, path_out_len);
+    return moonbit_dialog_encode_success(
+      DIALOG_BACKEND_MACOS_APPLE_SCRIPT,
+      DIALOG_RESPONSE_CANCEL
+    );
+  }
+
+  return moonbit_dialog_encode_success(
+    DIALOG_BACKEND_MACOS_APPLE_SCRIPT,
+    DIALOG_RESPONSE_OK
+  );
+}
+
+static int32_t moonbit_dialog_select_folder_macos(
+  const char* title_utf8,
+  const char* directory_utf8,
+  moonbit_bytes_t path_out,
+  int32_t path_out_len
+) {
+  const char* script[] = {
+    "on run argv",
+    "set promptText to item 1 of argv",
+    "set directoryPath to item 2 of argv",
+    "try",
+    "if directoryPath is \"\" then",
+    "return POSIX path of (choose folder with prompt promptText)",
+    "else",
+    "return POSIX path of (choose folder with prompt promptText default location (POSIX file directoryPath))",
+    "end if",
+    "on error number -128",
+    "return \"" DIALOG_APPLESCRIPT_CANCELLED "\"",
+    "end try",
+    "end run"
+  };
+  const char* args[] = { title_utf8, directory_utf8 };
+  int status = moonbit_dialog_run_osascript(
+    script,
+    (int)(sizeof(script) / sizeof(script[0])),
+    args,
+    (int)(sizeof(args) / sizeof(args[0])),
+    path_out,
+    path_out_len
+  );
+
+  if (status == DIALOG_HELPER_MISSING) {
+    return moonbit_dialog_encode_failure(
+      DIALOG_BACKEND_MACOS_APPLE_SCRIPT,
+      13
+    );
+  }
+  if (status != 0) {
+    return moonbit_dialog_encode_failure(
+      DIALOG_BACKEND_MACOS_APPLE_SCRIPT,
+      status
+    );
+  }
+  if (strcmp((char*)path_out, DIALOG_APPLESCRIPT_CANCELLED) == 0) {
+    moonbit_dialog_clear_output(path_out, path_out_len);
+    return moonbit_dialog_encode_success(
+      DIALOG_BACKEND_MACOS_APPLE_SCRIPT,
+      DIALOG_RESPONSE_CANCEL
+    );
+  }
+
+  return moonbit_dialog_encode_success(
+    DIALOG_BACKEND_MACOS_APPLE_SCRIPT,
+    DIALOG_RESPONSE_OK
+  );
+}
 #endif
 
 #if defined(__linux__)
-extern char** environ;
-
-#define DIALOG_HELPER_MISSING -32768
 #define DIALOG_XMESSAGE_BUTTON_BASE 20
-
-static int moonbit_dialog_wait_for_exit(pid_t pid) {
-  int status = 0;
-  if (waitpid(pid, &status, 0) < 0) {
-    return -errno;
-  }
-
-  if (WIFEXITED(status)) {
-    return WEXITSTATUS(status);
-  }
-
-  if (WIFSIGNALED(status)) {
-    return 512 + WTERMSIG(status);
-  }
-
-  return 513;
-}
-
-static int moonbit_dialog_run_program(const char* const argv[]) {
-  pid_t pid = 0;
-  int spawn_status = posix_spawnp(
-    &pid,
-    argv[0],
-    NULL,
-    NULL,
-    (char* const*)argv,
-    environ
-  );
-
-  if (spawn_status == ENOENT) {
-    return DIALOG_HELPER_MISSING;
-  }
-  if (spawn_status != 0) {
-    return -spawn_status;
-  }
-
-  return moonbit_dialog_wait_for_exit(pid);
-}
-
-static void moonbit_dialog_trim_newlines(char* output) {
-  size_t length = strlen(output);
-  while (length > 0) {
-    char current = output[length - 1];
-    if (current != '\n' && current != '\r') {
-      break;
-    }
-    output[length - 1] = '\0';
-    length--;
-  }
-}
-
-static int moonbit_dialog_run_program_capture_stdout(
-  const char* const argv[],
-  char* output,
-  size_t output_len
-) {
-  int pipe_fds[2] = {0, 0};
-  if (output_len > 0) {
-    output[0] = '\0';
-  }
-
-  if (pipe(pipe_fds) != 0) {
-    return -errno;
-  }
-
-  posix_spawn_file_actions_t actions;
-  int action_status = posix_spawn_file_actions_init(&actions);
-  if (action_status != 0) {
-    close(pipe_fds[0]);
-    close(pipe_fds[1]);
-    return -action_status;
-  }
-
-  posix_spawn_file_actions_addclose(&actions, pipe_fds[0]);
-  posix_spawn_file_actions_adddup2(&actions, pipe_fds[1], STDOUT_FILENO);
-  posix_spawn_file_actions_addclose(&actions, pipe_fds[1]);
-
-  pid_t pid = 0;
-  int spawn_status = posix_spawnp(
-    &pid,
-    argv[0],
-    &actions,
-    NULL,
-    (char* const*)argv,
-    environ
-  );
-  posix_spawn_file_actions_destroy(&actions);
-  close(pipe_fds[1]);
-
-  if (spawn_status == ENOENT) {
-    close(pipe_fds[0]);
-    return DIALOG_HELPER_MISSING;
-  }
-  if (spawn_status != 0) {
-    close(pipe_fds[0]);
-    return -spawn_status;
-  }
-
-  if (output_len > 0) {
-    size_t filled = 0;
-    while (filled + 1 < output_len) {
-      ssize_t count = read(
-        pipe_fds[0],
-        output + filled,
-        output_len - filled - 1
-      );
-      if (count <= 0) {
-        break;
-      }
-      filled += (size_t)count;
-    }
-    output[filled] = '\0';
-    moonbit_dialog_trim_newlines(output);
-  } else {
-    char discard[64];
-    while (read(pipe_fds[0], discard, sizeof(discard)) > 0) {
-    }
-  }
-
-  close(pipe_fds[0]);
-  return moonbit_dialog_wait_for_exit(pid);
-}
 
 static int moonbit_dialog_xmessage_label_safe(const char* label) {
   if (!moonbit_dialog_has_label(label)) {
@@ -737,8 +1350,8 @@ static int32_t moonbit_dialog_show_linux_zenity(
     buttons == DIALOG_BUTTONS_YES_NO_CANCEL
       ? moonbit_dialog_run_program_capture_stdout(
           argv,
-          output,
-          sizeof(output)
+          (moonbit_bytes_t)output,
+          (int32_t)sizeof(output)
         )
       : moonbit_dialog_run_program(argv);
 
@@ -1106,6 +1719,242 @@ static int32_t moonbit_dialog_show_linux(
 
   return DIALOG_STATUS_BACKEND_UNAVAILABLE;
 }
+
+static int32_t moonbit_dialog_open_file_linux(
+  const char* title_utf8,
+  const char* directory_utf8,
+  moonbit_bytes_t path_out,
+  int32_t path_out_len
+) {
+  char* start_path = moonbit_dialog_make_start_path(directory_utf8, "", 1);
+  const char* zenity_args[10];
+  int zenity_index = 0;
+  zenity_args[zenity_index++] = "zenity";
+  zenity_args[zenity_index++] = "--file-selection";
+  zenity_args[zenity_index++] = "--title";
+  zenity_args[zenity_index++] = title_utf8;
+  if (start_path != NULL) {
+    zenity_args[zenity_index++] = "--filename";
+    zenity_args[zenity_index++] = start_path;
+  }
+  zenity_args[zenity_index] = NULL;
+
+  int status = moonbit_dialog_run_program_capture_stdout(
+    zenity_args,
+    path_out,
+    path_out_len
+  );
+  if (status != DIALOG_HELPER_MISSING) {
+    free(start_path);
+    if (status == 0) {
+      return moonbit_dialog_encode_success(
+        DIALOG_BACKEND_LINUX_ZENITY,
+        DIALOG_RESPONSE_OK
+      );
+    }
+    if (status == 1 || status == 5) {
+      return moonbit_dialog_encode_success(
+        DIALOG_BACKEND_LINUX_ZENITY,
+        DIALOG_RESPONSE_CANCEL
+      );
+    }
+    return moonbit_dialog_encode_failure(DIALOG_BACKEND_LINUX_ZENITY, status);
+  }
+
+  const char* kdialog_args[8];
+  int kdialog_index = 0;
+  kdialog_args[kdialog_index++] = "kdialog";
+  kdialog_args[kdialog_index++] = "--getopenfilename";
+  if (start_path != NULL) {
+    kdialog_args[kdialog_index++] = start_path;
+  }
+  kdialog_args[kdialog_index++] = "--title";
+  kdialog_args[kdialog_index++] = title_utf8;
+  kdialog_args[kdialog_index] = NULL;
+
+  status = moonbit_dialog_run_program_capture_stdout(
+    kdialog_args,
+    path_out,
+    path_out_len
+  );
+  free(start_path);
+  if (status == DIALOG_HELPER_MISSING) {
+    return DIALOG_STATUS_BACKEND_UNAVAILABLE;
+  }
+  if (status == 0) {
+    return moonbit_dialog_encode_success(
+      DIALOG_BACKEND_LINUX_KDIALOG,
+      DIALOG_RESPONSE_OK
+    );
+  }
+  if (status == 1 || status == 255) {
+    return moonbit_dialog_encode_success(
+      DIALOG_BACKEND_LINUX_KDIALOG,
+      DIALOG_RESPONSE_CANCEL
+    );
+  }
+  return moonbit_dialog_encode_failure(DIALOG_BACKEND_LINUX_KDIALOG, status);
+}
+
+static int32_t moonbit_dialog_save_file_linux(
+  const char* title_utf8,
+  const char* directory_utf8,
+  const char* file_name_utf8,
+  moonbit_bytes_t path_out,
+  int32_t path_out_len
+) {
+  char* start_path = moonbit_dialog_make_start_path(
+    directory_utf8,
+    file_name_utf8,
+    1
+  );
+  const char* zenity_args[12];
+  int zenity_index = 0;
+  zenity_args[zenity_index++] = "zenity";
+  zenity_args[zenity_index++] = "--file-selection";
+  zenity_args[zenity_index++] = "--save";
+  zenity_args[zenity_index++] = "--confirm-overwrite";
+  zenity_args[zenity_index++] = "--title";
+  zenity_args[zenity_index++] = title_utf8;
+  if (start_path != NULL) {
+    zenity_args[zenity_index++] = "--filename";
+    zenity_args[zenity_index++] = start_path;
+  }
+  zenity_args[zenity_index] = NULL;
+
+  int status = moonbit_dialog_run_program_capture_stdout(
+    zenity_args,
+    path_out,
+    path_out_len
+  );
+  if (status != DIALOG_HELPER_MISSING) {
+    free(start_path);
+    if (status == 0) {
+      return moonbit_dialog_encode_success(
+        DIALOG_BACKEND_LINUX_ZENITY,
+        DIALOG_RESPONSE_OK
+      );
+    }
+    if (status == 1 || status == 5) {
+      return moonbit_dialog_encode_success(
+        DIALOG_BACKEND_LINUX_ZENITY,
+        DIALOG_RESPONSE_CANCEL
+      );
+    }
+    return moonbit_dialog_encode_failure(DIALOG_BACKEND_LINUX_ZENITY, status);
+  }
+
+  const char* kdialog_args[8];
+  int kdialog_index = 0;
+  kdialog_args[kdialog_index++] = "kdialog";
+  kdialog_args[kdialog_index++] = "--getsavefilename";
+  if (start_path != NULL) {
+    kdialog_args[kdialog_index++] = start_path;
+  }
+  kdialog_args[kdialog_index++] = "--title";
+  kdialog_args[kdialog_index++] = title_utf8;
+  kdialog_args[kdialog_index] = NULL;
+
+  status = moonbit_dialog_run_program_capture_stdout(
+    kdialog_args,
+    path_out,
+    path_out_len
+  );
+  free(start_path);
+  if (status == DIALOG_HELPER_MISSING) {
+    return DIALOG_STATUS_BACKEND_UNAVAILABLE;
+  }
+  if (status == 0) {
+    return moonbit_dialog_encode_success(
+      DIALOG_BACKEND_LINUX_KDIALOG,
+      DIALOG_RESPONSE_OK
+    );
+  }
+  if (status == 1 || status == 255) {
+    return moonbit_dialog_encode_success(
+      DIALOG_BACKEND_LINUX_KDIALOG,
+      DIALOG_RESPONSE_CANCEL
+    );
+  }
+  return moonbit_dialog_encode_failure(DIALOG_BACKEND_LINUX_KDIALOG, status);
+}
+
+static int32_t moonbit_dialog_select_folder_linux(
+  const char* title_utf8,
+  const char* directory_utf8,
+  moonbit_bytes_t path_out,
+  int32_t path_out_len
+) {
+  char* start_path = moonbit_dialog_make_start_path(directory_utf8, "", 1);
+  const char* zenity_args[10];
+  int zenity_index = 0;
+  zenity_args[zenity_index++] = "zenity";
+  zenity_args[zenity_index++] = "--file-selection";
+  zenity_args[zenity_index++] = "--directory";
+  zenity_args[zenity_index++] = "--title";
+  zenity_args[zenity_index++] = title_utf8;
+  if (start_path != NULL) {
+    zenity_args[zenity_index++] = "--filename";
+    zenity_args[zenity_index++] = start_path;
+  }
+  zenity_args[zenity_index] = NULL;
+
+  int status = moonbit_dialog_run_program_capture_stdout(
+    zenity_args,
+    path_out,
+    path_out_len
+  );
+  if (status != DIALOG_HELPER_MISSING) {
+    free(start_path);
+    if (status == 0) {
+      return moonbit_dialog_encode_success(
+        DIALOG_BACKEND_LINUX_ZENITY,
+        DIALOG_RESPONSE_OK
+      );
+    }
+    if (status == 1 || status == 5) {
+      return moonbit_dialog_encode_success(
+        DIALOG_BACKEND_LINUX_ZENITY,
+        DIALOG_RESPONSE_CANCEL
+      );
+    }
+    return moonbit_dialog_encode_failure(DIALOG_BACKEND_LINUX_ZENITY, status);
+  }
+
+  const char* kdialog_args[8];
+  int kdialog_index = 0;
+  kdialog_args[kdialog_index++] = "kdialog";
+  kdialog_args[kdialog_index++] = "--getexistingdirectory";
+  if (start_path != NULL) {
+    kdialog_args[kdialog_index++] = start_path;
+  }
+  kdialog_args[kdialog_index++] = "--title";
+  kdialog_args[kdialog_index++] = title_utf8;
+  kdialog_args[kdialog_index] = NULL;
+
+  status = moonbit_dialog_run_program_capture_stdout(
+    kdialog_args,
+    path_out,
+    path_out_len
+  );
+  free(start_path);
+  if (status == DIALOG_HELPER_MISSING) {
+    return DIALOG_STATUS_BACKEND_UNAVAILABLE;
+  }
+  if (status == 0) {
+    return moonbit_dialog_encode_success(
+      DIALOG_BACKEND_LINUX_KDIALOG,
+      DIALOG_RESPONSE_OK
+    );
+  }
+  if (status == 1 || status == 255) {
+    return moonbit_dialog_encode_success(
+      DIALOG_BACKEND_LINUX_KDIALOG,
+      DIALOG_RESPONSE_CANCEL
+    );
+  }
+  return moonbit_dialog_encode_failure(DIALOG_BACKEND_LINUX_KDIALOG, status);
+}
 #endif
 
 MOONBIT_FFI_EXPORT
@@ -1156,6 +2005,119 @@ int32_t moonbit_dialog_show_dialog(
   (void)accept_label;
   (void)reject_label;
   (void)cancel_label;
+  return DIALOG_STATUS_UNSUPPORTED_PLATFORM;
+#endif
+}
+
+MOONBIT_FFI_EXPORT
+int32_t moonbit_dialog_open_file(
+  moonbit_bytes_t title,
+  moonbit_bytes_t directory,
+  moonbit_bytes_t path_out,
+  int32_t path_out_len
+) {
+#if defined(_WIN32)
+  return moonbit_dialog_open_file_windows(
+    (const char*)title,
+    (const char*)directory,
+    path_out,
+    path_out_len
+  );
+#elif defined(__APPLE__)
+  return moonbit_dialog_open_file_macos(
+    (const char*)title,
+    (const char*)directory,
+    path_out,
+    path_out_len
+  );
+#elif defined(__linux__)
+  return moonbit_dialog_open_file_linux(
+    (const char*)title,
+    (const char*)directory,
+    path_out,
+    path_out_len
+  );
+#else
+  (void)title;
+  (void)directory;
+  moonbit_dialog_clear_output(path_out, path_out_len);
+  return DIALOG_STATUS_UNSUPPORTED_PLATFORM;
+#endif
+}
+
+MOONBIT_FFI_EXPORT
+int32_t moonbit_dialog_save_file(
+  moonbit_bytes_t title,
+  moonbit_bytes_t directory,
+  moonbit_bytes_t file_name,
+  moonbit_bytes_t path_out,
+  int32_t path_out_len
+) {
+#if defined(_WIN32)
+  return moonbit_dialog_save_file_windows(
+    (const char*)title,
+    (const char*)directory,
+    (const char*)file_name,
+    path_out,
+    path_out_len
+  );
+#elif defined(__APPLE__)
+  return moonbit_dialog_save_file_macos(
+    (const char*)title,
+    (const char*)directory,
+    (const char*)file_name,
+    path_out,
+    path_out_len
+  );
+#elif defined(__linux__)
+  return moonbit_dialog_save_file_linux(
+    (const char*)title,
+    (const char*)directory,
+    (const char*)file_name,
+    path_out,
+    path_out_len
+  );
+#else
+  (void)title;
+  (void)directory;
+  (void)file_name;
+  moonbit_dialog_clear_output(path_out, path_out_len);
+  return DIALOG_STATUS_UNSUPPORTED_PLATFORM;
+#endif
+}
+
+MOONBIT_FFI_EXPORT
+int32_t moonbit_dialog_select_folder(
+  moonbit_bytes_t title,
+  moonbit_bytes_t directory,
+  moonbit_bytes_t path_out,
+  int32_t path_out_len
+) {
+#if defined(_WIN32)
+  return moonbit_dialog_select_folder_windows(
+    (const char*)title,
+    (const char*)directory,
+    path_out,
+    path_out_len
+  );
+#elif defined(__APPLE__)
+  return moonbit_dialog_select_folder_macos(
+    (const char*)title,
+    (const char*)directory,
+    path_out,
+    path_out_len
+  );
+#elif defined(__linux__)
+  return moonbit_dialog_select_folder_linux(
+    (const char*)title,
+    (const char*)directory,
+    path_out,
+    path_out_len
+  );
+#else
+  (void)title;
+  (void)directory;
+  moonbit_dialog_clear_output(path_out, path_out_len);
   return DIALOG_STATUS_UNSUPPORTED_PLATFORM;
 #endif
 }

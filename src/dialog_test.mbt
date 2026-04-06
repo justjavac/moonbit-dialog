@@ -98,6 +98,7 @@ test "with_labels attaches custom labels without changing other fields" {
 test "supports_custom_labels documents the current backend behavior" {
   assert_eq(@dialog.supports_custom_labels(WindowsWin32), false)
   assert_eq(@dialog.supports_custom_labels(MacOSCoreFoundation), true)
+  assert_eq(@dialog.supports_custom_labels(MacOSAppleScript), false)
   assert_eq(@dialog.supports_custom_labels(LinuxKDialog), false)
 }
 

@@ -18,6 +18,7 @@ pub(all) enum Platform {
 pub(all) enum DialogBackend {
   WindowsWin32
   MacOSCoreFoundation
+  MacOSAppleScript
   LinuxZenity
   LinuxKDialog
   LinuxXMessage

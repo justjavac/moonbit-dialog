@@ -6,9 +6,10 @@ fn success_status_for_test(
   let backend_code = match backend {
     WindowsWin32 => 0
     MacOSCoreFoundation => 1
-    LinuxZenity => 2
-    LinuxKDialog => 3
-    LinuxXMessage => 4
+    MacOSAppleScript => 2
+    LinuxZenity => 3
+    LinuxKDialog => 4
+    LinuxXMessage => 5
   }
   let response_code = match response {
     Ok => 0
@@ -42,6 +43,10 @@ test "backend codes round-trip through the decoder" {
   assert_eq(
     backend_from_code(success_status_for_test(MacOSCoreFoundation)),
     Some(MacOSCoreFoundation),
+  )
+  assert_eq(
+    backend_from_code(success_status_for_test(MacOSAppleScript)),
+    Some(MacOSAppleScript),
   )
   assert_eq(
     backend_from_code(success_status_for_test(LinuxZenity)),

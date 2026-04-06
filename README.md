@@ -14,6 +14,7 @@
 - Info, warning, error, and question dialog levels
 - Yes/no confirmation dialogs with explicit responses
 - Generic standard-button dialogs (`Ok`, `OkCancel`, `YesNo`, `YesNoCancel`)
+- Open-file, save-file, and folder-selection dialogs
 - Best-effort custom button labels with backend capability checks
 - Small public API focused on readability
 - Detailed public API documentation in source
@@ -106,13 +107,27 @@ let dialog = @dialog.ChoiceDialog::new(
 Backends that cannot rename native buttons keep their default captions, so use
 `supports_custom_labels(outcome.backend)` if that distinction matters.
 
+Path pickers return a typed selection result instead of forcing callers to
+guess whether an empty string means “cancelled”:
+
+```moonbit
+match @dialog.open_file(directory="C:/Projects") {
+  Ok(outcome) =>
+    match outcome.selection {
+      Selected(path) => println("Picked \{path} with \{outcome.backend}")
+      Cancelled => println("User cancelled the picker")
+    }
+  Err(error) => println("Dialog failed: \{error}")
+}
+```
+
 ## Backend Strategy
 
 This first version chooses the smallest dependable implementation on each platform:
 
-- Windows: Win32 `MessageBoxW`
-- macOS: CoreFoundation user notification API
-- Linux: `zenity`, then `kdialog`, then `xmessage` via direct process spawning
+- Windows: Win32 `MessageBoxW` plus common file/folder dialogs
+- macOS: CoreFoundation alerts, plus AppleScript file/folder pickers via `osascript`
+- Linux: `zenity`, then `kdialog`, with `xmessage` reserved for message dialogs
 
 Linux desktop stacks vary a lot, so the library tries several common tools in a predictable order. If none are installed, the API returns `Err(BackendUnavailable(Linux))`.
 
@@ -127,10 +142,15 @@ The package currently exposes:
 - `DialogResponse`
 - `DialogOutcome`
 - `DialogLabels`
+- `PathDialogSelection`
+- `PathDialogOutcome`
 - `DialogError`
 - `MessageDialog`
 - `ConfirmDialog`
 - `ChoiceDialog`
+- `OpenFileDialog`
+- `SaveFileDialog`
+- `SelectFolderDialog`
 - `current_platform()`
 - `supports_custom_labels(backend)`
 - `show_message(message, title?, level?)`
@@ -141,8 +161,12 @@ The package currently exposes:
 - `show_dialog(message, title?, buttons?, level?)`
 - `show_ok_cancel(message, title?, level?)`
 - `ask_yes_no_cancel(message, title?, level?)`
+- `open_file(title?, directory?)`
+- `save_file(title?, directory?, file_name?)`
+- `select_folder(title?, directory?)`
 
-The API returns `Result[DialogBackend, DialogError]` so callers can handle missing backends or backend failures without guessing.
+The API returns typed `Result` values so callers can tell success, cancellation,
+and backend failures apart without guessing.
 
 ## Running the Example
 
@@ -173,7 +197,8 @@ moon coverage analyze -p justjavac/dialog -- -f cobertura -o coverage.xml
 
 ## Scope of This Version
 
-This initial release only implements a message dialog with an OK-style acknowledgement flow.
+This version now covers message dialogs, confirmation dialogs, standard button
+sets, and basic path pickers.
 
 Planned future work can build on the same structure to add:
 
