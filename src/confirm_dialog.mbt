@@ -7,7 +7,12 @@ pub fn ConfirmDialog::new(
   title? : StringView = "Confirm",
   level? : DialogLevel = Question,
 ) -> ConfirmDialog {
-  { title: title.to_string(), message: message.to_string(), level }
+  {
+    title: title.to_string(),
+    message: message.to_string(),
+    level,
+    labels: DialogLabels::none(),
+  }
 }
 
 ///|
@@ -15,7 +20,7 @@ pub fn ConfirmDialog::new(
 pub fn ConfirmDialog::show(
   self : ConfirmDialog,
 ) -> Result[DialogOutcome, DialogError] {
-  show_dialog_request(self.title, self.message, self.level, YesNo)
+  show_dialog_request(self.title, self.message, self.level, YesNo, self.labels)
 }
 
 ///|

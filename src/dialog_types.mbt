@@ -61,6 +61,17 @@ pub struct DialogOutcome {
 } derive(Eq, Show)
 
 ///|
+/// Optional custom labels for the standard dialog buttons.
+///
+/// The `accept` label is used for `Ok` or `Yes`, `reject` is used for `No`,
+/// and `cancel` is used for `Cancel`.
+pub struct DialogLabels {
+  accept : String
+  reject : String
+  cancel : String
+} derive(Eq, Show)
+
+///|
 /// Errors returned when a dialog cannot be shown.
 ///
 /// - `UnsupportedPlatform` means the current OS is outside the current scope.
@@ -81,6 +92,7 @@ pub struct MessageDialog {
   title : String
   message : String
   level : DialogLevel
+  labels : DialogLabels
 } derive(Eq, Show)
 
 ///|
@@ -89,6 +101,7 @@ pub struct ConfirmDialog {
   title : String
   message : String
   level : DialogLevel
+  labels : DialogLabels
 } derive(Eq, Show)
 
 ///|
@@ -98,4 +111,5 @@ pub struct ChoiceDialog {
   message : String
   level : DialogLevel
   buttons : DialogButtons
+  labels : DialogLabels
 } derive(Eq, Show)

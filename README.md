@@ -14,6 +14,7 @@
 - Info, warning, error, and question dialog levels
 - Yes/no confirmation dialogs with explicit responses
 - Generic standard-button dialogs (`Ok`, `OkCancel`, `YesNo`, `YesNoCancel`)
+- Best-effort custom button labels with backend capability checks
 - Small public API focused on readability
 - Detailed public API documentation in source
 - Coverage-aware tests plus Codecov badges
@@ -89,6 +90,22 @@ match @dialog.show_dialog(
 }
 ```
 
+If you want custom captions, attach `DialogLabels` and optionally inspect
+`supports_custom_labels` on the backend that actually displayed the dialog:
+
+```moonbit
+let dialog = @dialog.ChoiceDialog::new(
+  "Save changes before closing?",
+  buttons=YesNoCancel,
+  level=Question,
+).with_labels(
+  @dialog.DialogLabels::yes_no_cancel("Save", "Discard", "Stay"),
+)
+```
+
+Backends that cannot rename native buttons keep their default captions, so use
+`supports_custom_labels(outcome.backend)` if that distinction matters.
+
 ## Backend Strategy
 
 This first version chooses the smallest dependable implementation on each platform:
@@ -109,11 +126,13 @@ The package currently exposes:
 - `DialogButtons`
 - `DialogResponse`
 - `DialogOutcome`
+- `DialogLabels`
 - `DialogError`
 - `MessageDialog`
 - `ConfirmDialog`
 - `ChoiceDialog`
 - `current_platform()`
+- `supports_custom_labels(backend)`
 - `show_message(message, title?, level?)`
 - `show_info(message, title?)`
 - `show_warning(message, title?)`

@@ -8,7 +8,12 @@ pub fn MessageDialog::new(
   title? : StringView = "Message",
   level? : DialogLevel = Info,
 ) -> MessageDialog {
-  { title: title.to_string(), message: message.to_string(), level }
+  {
+    title: title.to_string(),
+    message: message.to_string(),
+    level,
+    labels: DialogLabels::none(),
+  }
 }
 
 ///|
@@ -25,7 +30,13 @@ pub fn MessageDialog::new(
 pub fn MessageDialog::show(
   self : MessageDialog,
 ) -> Result[DialogBackend, DialogError] {
-  show_dialog_backend_request(self.title, self.message, self.level, Ok)
+  show_dialog_backend_request(
+    self.title,
+    self.message,
+    self.level,
+    Ok,
+    self.labels,
+  )
 }
 
 ///|

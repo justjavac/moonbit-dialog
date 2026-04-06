@@ -20,6 +20,8 @@ pub fn show_ok_cancel(StringView, title? : StringView, level? : DialogLevel) -> 
 
 pub fn show_warning(StringView, title? : StringView) -> Result[DialogBackend, DialogError]
 
+pub fn supports_custom_labels(DialogBackend) -> Bool
+
 // Errors
 
 // Types and methods
@@ -28,17 +30,21 @@ pub struct ChoiceDialog {
   message : String
   level : DialogLevel
   buttons : DialogButtons
+  labels : DialogLabels
 } derive(Eq, Show)
 pub fn ChoiceDialog::new(StringView, title? : StringView, buttons? : DialogButtons, level? : DialogLevel) -> Self
 pub fn ChoiceDialog::show(Self) -> Result[DialogOutcome, DialogError]
+pub fn ChoiceDialog::with_labels(Self, DialogLabels) -> Self
 
 pub struct ConfirmDialog {
   title : String
   message : String
   level : DialogLevel
+  labels : DialogLabels
 } derive(Eq, Show)
 pub fn ConfirmDialog::new(StringView, title? : StringView, level? : DialogLevel) -> Self
 pub fn ConfirmDialog::show(Self) -> Result[DialogOutcome, DialogError]
+pub fn ConfirmDialog::with_labels(Self, DialogLabels) -> Self
 
 pub(all) enum DialogBackend {
   WindowsWin32
@@ -60,6 +66,17 @@ pub(all) enum DialogError {
   BackendUnavailable(Platform)
   BackendFailed(DialogBackend, Int)
 } derive(Eq, Show)
+
+pub struct DialogLabels {
+  accept : String
+  reject : String
+  cancel : String
+} derive(Eq, Show)
+pub fn DialogLabels::none() -> Self
+pub fn DialogLabels::ok(StringView) -> Self
+pub fn DialogLabels::ok_cancel(StringView, StringView) -> Self
+pub fn DialogLabels::yes_no(StringView, StringView) -> Self
+pub fn DialogLabels::yes_no_cancel(StringView, StringView, StringView) -> Self
 
 pub(all) enum DialogLevel {
   Info
@@ -84,9 +101,11 @@ pub struct MessageDialog {
   title : String
   message : String
   level : DialogLevel
+  labels : DialogLabels
 } derive(Eq, Show)
 pub fn MessageDialog::new(StringView, title? : StringView, level? : DialogLevel) -> Self
 pub fn MessageDialog::show(Self) -> Result[DialogBackend, DialogError]
+pub fn MessageDialog::with_labels(Self, DialogLabels) -> Self
 
 pub(all) enum Platform {
   Windows

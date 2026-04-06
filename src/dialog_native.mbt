@@ -153,6 +153,7 @@ fn show_dialog_request(
   message : String,
   level : DialogLevel,
   buttons : DialogButtons,
+  labels : DialogLabels,
 ) -> Result[DialogOutcome, DialogError] {
   let platform = current_platform_internal()
   if platform == Unknown {
@@ -163,9 +164,9 @@ fn show_dialog_request(
     dialog_buttons_to_code(buttons),
     encode_utf8_bytes(title),
     encode_utf8_bytes(message),
-    encode_utf8_bytes(""),
-    encode_utf8_bytes(""),
-    encode_utf8_bytes(""),
+    encode_utf8_bytes(labels.accept),
+    encode_utf8_bytes(labels.reject),
+    encode_utf8_bytes(labels.cancel),
   )
   decode_dialog_outcome(platform, raw_result)
 }
@@ -177,6 +178,7 @@ fn show_dialog_backend_request(
   message : String,
   level : DialogLevel,
   buttons : DialogButtons,
+  labels : DialogLabels,
 ) -> Result[DialogBackend, DialogError] {
   let platform = current_platform_internal()
   if platform == Unknown {
@@ -187,9 +189,9 @@ fn show_dialog_backend_request(
     dialog_buttons_to_code(buttons),
     encode_utf8_bytes(title),
     encode_utf8_bytes(message),
-    encode_utf8_bytes(""),
-    encode_utf8_bytes(""),
-    encode_utf8_bytes(""),
+    encode_utf8_bytes(labels.accept),
+    encode_utf8_bytes(labels.reject),
+    encode_utf8_bytes(labels.cancel),
   )
   decode_backend_result(platform, raw_result)
 }

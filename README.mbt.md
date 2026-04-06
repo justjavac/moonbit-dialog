@@ -27,3 +27,9 @@ let choice = @dialog.ChoiceDialog::new(
   level=Question,
 )
 ```
+
+```mbt
+let relabeled = @dialog.MessageDialog::new(
+  "Build finished successfully.",
+).with_labels(@dialog.DialogLabels::ok("Open report"))
+```

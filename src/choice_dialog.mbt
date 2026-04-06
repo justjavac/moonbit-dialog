@@ -6,7 +6,13 @@ pub fn ChoiceDialog::new(
   buttons? : DialogButtons = Ok,
   level? : DialogLevel = Info,
 ) -> ChoiceDialog {
-  { title: title.to_string(), message: message.to_string(), level, buttons }
+  {
+    title: title.to_string(),
+    message: message.to_string(),
+    level,
+    buttons,
+    labels: DialogLabels::none(),
+  }
 }
 
 ///|
@@ -14,7 +20,13 @@ pub fn ChoiceDialog::new(
 pub fn ChoiceDialog::show(
   self : ChoiceDialog,
 ) -> Result[DialogOutcome, DialogError] {
-  show_dialog_request(self.title, self.message, self.level, self.buttons)
+  show_dialog_request(
+    self.title,
+    self.message,
+    self.level,
+    self.buttons,
+    self.labels,
+  )
 }
 
 ///|
