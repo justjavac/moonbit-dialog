@@ -36,6 +36,15 @@ pub(all) enum DialogLevel {
 } derive(Eq, Show)
 
 ///|
+/// The standard button combinations supported by the generic dialog API.
+pub(all) enum DialogButtons {
+  Ok
+  OkCancel
+  YesNo
+  YesNoCancel
+} derive(Eq, Show)
+
+///|
 /// The user's response to a dialog.
 pub(all) enum DialogResponse {
   Ok
@@ -80,4 +89,13 @@ pub struct ConfirmDialog {
   title : String
   message : String
   level : DialogLevel
+} derive(Eq, Show)
+
+///|
+/// A generic dialog request with one of the standard button combinations.
+pub struct ChoiceDialog {
+  title : String
+  message : String
+  level : DialogLevel
+  buttons : DialogButtons
 } derive(Eq, Show)

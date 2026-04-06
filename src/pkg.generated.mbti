@@ -4,7 +4,11 @@ package "justjavac/dialog"
 // Values
 pub fn ask_yes_no(StringView, title? : StringView, level? : DialogLevel) -> Result[DialogOutcome, DialogError]
 
+pub fn ask_yes_no_cancel(StringView, title? : StringView, level? : DialogLevel) -> Result[DialogOutcome, DialogError]
+
 pub fn current_platform() -> Platform
+
+pub fn show_dialog(StringView, title? : StringView, buttons? : DialogButtons, level? : DialogLevel) -> Result[DialogOutcome, DialogError]
 
 pub fn show_error(StringView, title? : StringView) -> Result[DialogBackend, DialogError]
 
@@ -12,11 +16,22 @@ pub fn show_info(StringView, title? : StringView) -> Result[DialogBackend, Dialo
 
 pub fn show_message(StringView, title? : StringView, level? : DialogLevel) -> Result[DialogBackend, DialogError]
 
+pub fn show_ok_cancel(StringView, title? : StringView, level? : DialogLevel) -> Result[DialogOutcome, DialogError]
+
 pub fn show_warning(StringView, title? : StringView) -> Result[DialogBackend, DialogError]
 
 // Errors
 
 // Types and methods
+pub struct ChoiceDialog {
+  title : String
+  message : String
+  level : DialogLevel
+  buttons : DialogButtons
+} derive(Eq, Show)
+pub fn ChoiceDialog::new(StringView, title? : StringView, buttons? : DialogButtons, level? : DialogLevel) -> Self
+pub fn ChoiceDialog::show(Self) -> Result[DialogOutcome, DialogError]
+
 pub struct ConfirmDialog {
   title : String
   message : String
@@ -31,6 +46,13 @@ pub(all) enum DialogBackend {
   LinuxZenity
   LinuxKDialog
   LinuxXMessage
+} derive(Eq, Show)
+
+pub(all) enum DialogButtons {
+  Ok
+  OkCancel
+  YesNo
+  YesNoCancel
 } derive(Eq, Show)
 
 pub(all) enum DialogError {

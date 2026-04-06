@@ -106,6 +106,17 @@ test "dialog outcomes keep backend and response" {
 }
 
 ///|
+test "backend-only decoder ignores the response code" {
+  assert_eq(
+    decode_backend_result(
+      Linux,
+      success_status_for_test(LinuxKDialog, response=Cancel),
+    ),
+    Ok(LinuxKDialog),
+  )
+}
+
+///|
 test "failure statuses keep backend and detail" {
   let result = decode_backend_result(
     Windows,

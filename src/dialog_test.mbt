@@ -39,6 +39,29 @@ test "ConfirmDialog::new uses the default title and level" {
 }
 
 ///|
+test "ChoiceDialog::new stores buttons and level" {
+  let dialog = @dialog.ChoiceDialog::new(
+    "Save changes before closing?",
+    title="moonbit-dialog",
+    buttons=YesNoCancel,
+    level=Question,
+  )
+  assert_eq(dialog.title, "moonbit-dialog")
+  assert_eq(dialog.message, "Save changes before closing?")
+  assert_eq(dialog.level, Question)
+  assert_eq(dialog.buttons, YesNoCancel)
+}
+
+///|
+test "ChoiceDialog::new uses the default title, level, and buttons" {
+  let dialog = @dialog.ChoiceDialog::new("Done")
+  assert_eq(dialog.title, "Dialog")
+  assert_eq(dialog.message, "Done")
+  assert_eq(dialog.level, Info)
+  assert_eq(dialog.buttons, Ok)
+}
+
+///|
 test "current_platform returns a known enum" {
   let platform = @dialog.current_platform()
   assert_true(

@@ -19,3 +19,11 @@ let confirm = @dialog.ConfirmDialog::new(
   "Overwrite the generated files?",
 )
 ```
+
+```mbt
+let choice = @dialog.ChoiceDialog::new(
+  "Save changes before closing?",
+  buttons=YesNoCancel,
+  level=Question,
+)
+```

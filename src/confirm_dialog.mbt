@@ -15,20 +15,7 @@ pub fn ConfirmDialog::new(
 pub fn ConfirmDialog::show(
   self : ConfirmDialog,
 ) -> Result[DialogOutcome, DialogError] {
-  let platform = current_platform_internal()
-  if platform == Unknown {
-    return Err(UnsupportedPlatform(Unknown))
-  }
-  let raw_result = show_dialog_ffi(
-    dialog_level_to_code(self.level),
-    DIALOG_BUTTONS_YES_NO_CODE,
-    encode_utf8_bytes(self.title),
-    encode_utf8_bytes(self.message),
-    encode_utf8_bytes(""),
-    encode_utf8_bytes(""),
-    encode_utf8_bytes(""),
-  )
-  decode_dialog_outcome(platform, raw_result)
+  show_dialog_request(self.title, self.message, self.level, YesNo)
 }
 
 ///|

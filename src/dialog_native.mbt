@@ -30,7 +30,13 @@ const SUCCESS_RESPONSE_STRIDE : Int = 10
 const DIALOG_BUTTONS_OK_CODE : Int = 0
 
 ///|
+const DIALOG_BUTTONS_OK_CANCEL_CODE : Int = 1
+
+///|
 const DIALOG_BUTTONS_YES_NO_CODE : Int = 2
+
+///|
+const DIALOG_BUTTONS_YES_NO_CANCEL_CODE : Int = 3
 
 ///|
 /// Encode a MoonBit string as UTF-8 bytes for native APIs.
@@ -46,6 +52,17 @@ fn dialog_level_to_code(level : DialogLevel) -> Int {
     Warning => 1
     Error => 2
     Question => 3
+  }
+}
+
+///|
+/// Convert a public button combination into the native FFI code.
+fn dialog_buttons_to_code(buttons : DialogButtons) -> Int {
+  match buttons {
+    Ok => DIALOG_BUTTONS_OK_CODE
+    OkCancel => DIALOG_BUTTONS_OK_CANCEL_CODE
+    YesNo => DIALOG_BUTTONS_YES_NO_CODE
+    YesNoCancel => DIALOG_BUTTONS_YES_NO_CANCEL_CODE
   }
 }
 
@@ -127,6 +144,54 @@ fn decode_backend_result(
     Ok(outcome) => Ok(outcome.backend)
     Err(error) => Err(error)
   }
+}
+
+///|
+/// Show a dialog request and decode the backend plus selected response.
+fn show_dialog_request(
+  title : String,
+  message : String,
+  level : DialogLevel,
+  buttons : DialogButtons,
+) -> Result[DialogOutcome, DialogError] {
+  let platform = current_platform_internal()
+  if platform == Unknown {
+    return Err(UnsupportedPlatform(Unknown))
+  }
+  let raw_result = show_dialog_ffi(
+    dialog_level_to_code(level),
+    dialog_buttons_to_code(buttons),
+    encode_utf8_bytes(title),
+    encode_utf8_bytes(message),
+    encode_utf8_bytes(""),
+    encode_utf8_bytes(""),
+    encode_utf8_bytes(""),
+  )
+  decode_dialog_outcome(platform, raw_result)
+}
+
+///|
+/// Show a dialog request and decode only the backend that displayed it.
+fn show_dialog_backend_request(
+  title : String,
+  message : String,
+  level : DialogLevel,
+  buttons : DialogButtons,
+) -> Result[DialogBackend, DialogError] {
+  let platform = current_platform_internal()
+  if platform == Unknown {
+    return Err(UnsupportedPlatform(Unknown))
+  }
+  let raw_result = show_dialog_ffi(
+    dialog_level_to_code(level),
+    dialog_buttons_to_code(buttons),
+    encode_utf8_bytes(title),
+    encode_utf8_bytes(message),
+    encode_utf8_bytes(""),
+    encode_utf8_bytes(""),
+    encode_utf8_bytes(""),
+  )
+  decode_backend_result(platform, raw_result)
 }
 
 ///|
