@@ -44,3 +44,48 @@ test "file filter encoding escapes separators" {
     "Source\\tFiles\t*.mbt\t*.txt\\nbackup\tliteral\\\\name",
   )
 }
+
+///|
+fn encode_path_list_for_test(paths : Array[String]) -> Bytes {
+  let encoded : Array[String] = []
+  for path in paths {
+    encoded.push(escape_serialized_component(path))
+  }
+  encode_utf8_bytes(encoded.join("\n"))
+}
+
+///|
+test "path list encoding keeps separators round-trippable" {
+  let encoded = encode_path_list_for_test([
+    "C:/Temp/a.txt", "D:\\Projects\\notes.md", "line\nbreak.txt",
+  ])
+  assert_eq(decode_path_list(encoded), [
+    "C:/Temp/a.txt", "D:\\Projects\\notes.md", "line\nbreak.txt",
+  ])
+}
+
+///|
+test "multi path dialog selection keeps the selected paths" {
+  let result = decode_multi_path_dialog_outcome(
+    Windows,
+    success_status_for_test(WindowsWin32),
+    encode_path_list_for_test(["C:/Temp/a.txt", "C:/Temp/b.txt"]),
+  )
+  assert_eq(
+    result,
+    Ok({
+      backend: WindowsWin32,
+      selection: Selected(["C:/Temp/a.txt", "C:/Temp/b.txt"]),
+    }),
+  )
+}
+
+///|
+test "multi path dialog cancellation keeps the backend" {
+  let result = decode_multi_path_dialog_outcome(
+    Linux,
+    success_status_for_test(LinuxZenity, response=Cancel),
+    encode_path_list_for_test([]),
+  )
+  assert_eq(result, Ok({ backend: LinuxZenity, selection: Cancelled }))
+}

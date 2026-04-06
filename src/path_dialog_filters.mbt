@@ -65,7 +65,19 @@ fn copy_file_filters(filters : Array[FileFilter]) -> Array[FileFilter] {
 }
 
 ///|
-fn escape_file_filter_component(text : String) -> String {
+pub fn OpenFilesDialog::with_filters(
+  self : OpenFilesDialog,
+  filters : Array[FileFilter],
+) -> OpenFilesDialog {
+  {
+    title: self.title,
+    directory: self.directory,
+    filters: copy_file_filters(filters),
+  }
+}
+
+///|
+fn escape_serialized_component(text : String) -> String {
   let builder = StringBuilder::new(size_hint=text.length())
   for ch in text {
     match ch {
@@ -75,6 +87,31 @@ fn escape_file_filter_component(text : String) -> String {
       '\t' => builder.write_view("\\t")
       _ => builder.write_char(ch)
     }
+  }
+  builder.to_string()
+}
+
+///|
+fn unescape_serialized_component(text : StringView) -> String {
+  let builder = StringBuilder::new()
+  let mut is_escaped = false
+  for ch in text.to_string() {
+    if is_escaped {
+      match ch {
+        'n' => builder.write_char('\n')
+        'r' => builder.write_char('\r')
+        't' => builder.write_char('\t')
+        _ => builder.write_char(ch)
+      }
+      is_escaped = false
+    } else if ch == '\\' {
+      is_escaped = true
+    } else {
+      builder.write_char(ch)
+    }
+  }
+  if is_escaped {
+    builder.write_char('\\')
   }
   builder.to_string()
 }
@@ -90,11 +127,25 @@ fn encode_file_filters(filters : Array[FileFilter]) -> Bytes {
     if filter.patterns.length() == 0 {
       continue
     }
-    let parts : Array[String] = [escape_file_filter_component(filter.name)]
+    let parts : Array[String] = [escape_serialized_component(filter.name)]
     for pattern in filter.patterns {
-      parts.push(escape_file_filter_component(pattern))
+      parts.push(escape_serialized_component(pattern))
     }
     encoded_filters.push(parts.join("\t"))
   }
   encode_utf8_bytes(encoded_filters.join("\n"))
+}
+
+///|
+fn decode_path_list(bytes : Bytes) -> Array[String] {
+  let raw = utf8_bytes_to_mbt_string(bytes)
+  if raw == "" {
+    return []
+  }
+
+  let decoded : Array[String] = []
+  for component in raw.split("\n") {
+    decoded.push(unescape_serialized_component(component))
+  }
+  decoded
 }

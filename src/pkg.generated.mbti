@@ -10,6 +10,8 @@ pub fn current_platform() -> Platform
 
 pub fn open_file(title? : StringView, directory? : StringView) -> Result[PathDialogOutcome, DialogError]
 
+pub fn open_files(title? : StringView, directory? : StringView) -> Result[MultiPathDialogOutcome, DialogError]
+
 pub fn save_file(title? : StringView, directory? : StringView, file_name? : StringView) -> Result[PathDialogOutcome, DialogError]
 
 pub fn select_folder(title? : StringView, directory? : StringView) -> Result[PathDialogOutcome, DialogError]
@@ -120,6 +122,16 @@ pub fn MessageDialog::new(StringView, title? : StringView, level? : DialogLevel)
 pub fn MessageDialog::show(Self) -> Result[DialogBackend, DialogError]
 pub fn MessageDialog::with_labels(Self, DialogLabels) -> Self
 
+pub struct MultiPathDialogOutcome {
+  backend : DialogBackend
+  selection : MultiPathSelection
+} derive(Eq, Show)
+
+pub(all) enum MultiPathSelection {
+  Selected(Array[String])
+  Cancelled
+} derive(Eq, Show)
+
 pub struct OpenFileDialog {
   title : String
   directory : String
@@ -128,6 +140,15 @@ pub struct OpenFileDialog {
 pub fn OpenFileDialog::new(title? : StringView, directory? : StringView) -> Self
 pub fn OpenFileDialog::show(Self) -> Result[PathDialogOutcome, DialogError]
 pub fn OpenFileDialog::with_filters(Self, Array[FileFilter]) -> Self
+
+pub struct OpenFilesDialog {
+  title : String
+  directory : String
+  filters : Array[FileFilter]
+} derive(Eq, Show)
+pub fn OpenFilesDialog::new(title? : StringView, directory? : StringView) -> Self
+pub fn OpenFilesDialog::show(Self) -> Result[MultiPathDialogOutcome, DialogError]
+pub fn OpenFilesDialog::with_filters(Self, Array[FileFilter]) -> Self
 
 pub struct PathDialogOutcome {
   backend : DialogBackend
