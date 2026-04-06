@@ -161,25 +161,75 @@ fn decode_failure_status(raw : Int) -> (DialogBackend, Int)? {
 }
 
 ///|
+/// Decode a raw native status into a public error when the dialog did not succeed.
+fn decode_status_error(platform : Platform, raw : Int) -> DialogError? {
+  if raw == BACKEND_UNAVAILABLE_STATUS {
+    Some(BackendUnavailable(platform))
+  } else if raw == UNSUPPORTED_PLATFORM_STATUS {
+    Some(UnsupportedPlatform(platform))
+  } else if raw < 0 {
+    match decode_failure_status(raw) {
+      Some((backend, detail)) => Some(BackendFailed(backend, detail))
+      None => Some(UnsupportedPlatform(platform))
+    }
+  } else {
+    None
+  }
+}
+
+///|
 /// Decode a raw native dialog status into a backend-and-response result.
 fn decode_dialog_outcome(
   platform : Platform,
   raw : Int,
 ) -> Result[DialogOutcome, DialogError] {
-  if raw == BACKEND_UNAVAILABLE_STATUS {
-    Err(BackendUnavailable(platform))
-  } else if raw == UNSUPPORTED_PLATFORM_STATUS {
-    Err(UnsupportedPlatform(platform))
-  } else if raw >= 0 {
-    match (backend_from_success(raw), response_from_success(raw)) {
-      (Some(backend), Some(response)) => Ok({ backend, response })
-      _ => Err(UnsupportedPlatform(platform))
-    }
+  match decode_status_error(platform, raw) {
+    Some(error) => Err(error)
+    None =>
+      match (backend_from_success(raw), response_from_success(raw)) {
+        (Some(backend), Some(response)) => Ok({ backend, response })
+        _ => Err(UnsupportedPlatform(platform))
+      }
+  }
+}
+
+///|
+/// Resolve the current platform and reject unsupported targets up front.
+fn supported_platform_result() -> Result[Platform, DialogError] {
+  let platform = current_platform_internal()
+  if platform == Unknown {
+    Err(UnsupportedPlatform(Unknown))
   } else {
-    match decode_failure_status(raw) {
-      Some((backend, detail)) => Err(BackendFailed(backend, detail))
-      None => Err(UnsupportedPlatform(platform))
-    }
+    Ok(platform)
+  }
+}
+
+///|
+/// Show a dialog request and return the platform plus raw native status.
+fn show_dialog_raw_request(
+  title : String,
+  message : String,
+  level : DialogLevel,
+  buttons : DialogButtons,
+  labels : DialogLabels,
+) -> Result[(Platform, Int), DialogError] {
+  match supported_platform_result() {
+    Ok(platform) =>
+      Ok(
+        (
+          platform,
+          show_dialog_ffi(
+            dialog_level_to_code(level),
+            dialog_buttons_to_code(buttons),
+            encode_utf8_bytes(title),
+            encode_utf8_bytes(message),
+            encode_utf8_bytes(labels.accept),
+            encode_utf8_bytes(labels.reject),
+            encode_utf8_bytes(labels.cancel),
+          ),
+        ),
+      )
+    Err(error) => Err(error)
   }
 }
 
@@ -204,20 +254,10 @@ fn show_dialog_request(
   buttons : DialogButtons,
   labels : DialogLabels,
 ) -> Result[DialogOutcome, DialogError] {
-  let platform = current_platform_internal()
-  if platform == Unknown {
-    return Err(UnsupportedPlatform(Unknown))
+  match show_dialog_raw_request(title, message, level, buttons, labels) {
+    Ok((platform, raw_result)) => decode_dialog_outcome(platform, raw_result)
+    Err(error) => Err(error)
   }
-  let raw_result = show_dialog_ffi(
-    dialog_level_to_code(level),
-    dialog_buttons_to_code(buttons),
-    encode_utf8_bytes(title),
-    encode_utf8_bytes(message),
-    encode_utf8_bytes(labels.accept),
-    encode_utf8_bytes(labels.reject),
-    encode_utf8_bytes(labels.cancel),
-  )
-  decode_dialog_outcome(platform, raw_result)
 }
 
 ///|
@@ -229,20 +269,10 @@ fn show_dialog_backend_request(
   buttons : DialogButtons,
   labels : DialogLabels,
 ) -> Result[DialogBackend, DialogError] {
-  let platform = current_platform_internal()
-  if platform == Unknown {
-    return Err(UnsupportedPlatform(Unknown))
+  match show_dialog_raw_request(title, message, level, buttons, labels) {
+    Ok((platform, raw_result)) => decode_backend_result(platform, raw_result)
+    Err(error) => Err(error)
   }
-  let raw_result = show_dialog_ffi(
-    dialog_level_to_code(level),
-    dialog_buttons_to_code(buttons),
-    encode_utf8_bytes(title),
-    encode_utf8_bytes(message),
-    encode_utf8_bytes(labels.accept),
-    encode_utf8_bytes(labels.reject),
-    encode_utf8_bytes(labels.cancel),
-  )
-  decode_backend_result(platform, raw_result)
 }
 
 ///|

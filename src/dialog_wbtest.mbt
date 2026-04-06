@@ -1,10 +1,7 @@
 ///|
-/// Build a synthetic successful status code for decoder tests.
-fn success_status_for_test(
-  backend : DialogBackend,
-  response? : DialogResponse = Ok,
-) -> Int {
-  let backend_code = match backend {
+/// Map a backend enum to the raw code used by the native bridge.
+fn backend_code_for_test(backend : DialogBackend) -> Int {
+  match backend {
     WindowsWin32 => 0
     MacOSCoreFoundation => 1
     MacOSAppleScript => 2
@@ -12,13 +9,27 @@ fn success_status_for_test(
     LinuxKDialog => 4
     LinuxXMessage => 5
   }
-  let response_code = match response {
+}
+
+///|
+/// Map a response enum to the raw success payload used by the native bridge.
+fn response_code_for_test(response : DialogResponse) -> Int {
+  match response {
     Ok => 0
     Cancel => 1
     Yes => 2
     No => 3
   }
-  backend_code + response_code * SUCCESS_RESPONSE_STRIDE
+}
+
+///|
+/// Build a synthetic successful status code for decoder tests.
+fn success_status_for_test(
+  backend : DialogBackend,
+  response? : DialogResponse = Ok,
+) -> Int {
+  backend_code_for_test(backend) +
+  response_code_for_test(response) * SUCCESS_RESPONSE_STRIDE
 }
 
 ///|
@@ -32,7 +43,7 @@ fn failure_status(backend : DialogBackend, detail : Int) -> Int {
     detail
   }
   -(NATIVE_FAILURE_BASE +
-  success_status_for_test(backend) * NATIVE_FAILURE_STRIDE +
+  backend_code_for_test(backend) * NATIVE_FAILURE_STRIDE +
   detail)
 }
 

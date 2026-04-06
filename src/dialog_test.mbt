@@ -68,15 +68,23 @@ test "ChoiceDialog::new uses the default title, level, and buttons" {
 }
 
 ///|
-test "DialogLabels constructors map to the expected fields" {
-  assert_eq(
-    @dialog.DialogLabels::ok("Continue"),
-    @dialog.DialogLabels::ok("Continue"),
+test "DialogLabels constructors populate the expected slots" {
+  let none = @dialog.DialogLabels::none()
+  assert_eq(none.accept, "")
+  assert_eq(none.reject, "")
+  assert_eq(none.cancel, "")
+
+  let ok = @dialog.DialogLabels::ok("Continue")
+  assert_eq(ok.accept, "Continue")
+  assert_eq(ok.reject, "")
+  assert_eq(ok.cancel, "")
+
+  let yes_no_cancel = @dialog.DialogLabels::yes_no_cancel(
+    "Save", "Discard", "Stay",
   )
-  assert_eq(
-    @dialog.DialogLabels::yes_no_cancel("Save", "Discard", "Stay"),
-    @dialog.DialogLabels::yes_no_cancel("Save", "Discard", "Stay"),
-  )
+  assert_eq(yes_no_cancel.accept, "Save")
+  assert_eq(yes_no_cancel.reject, "Discard")
+  assert_eq(yes_no_cancel.cancel, "Stay")
 }
 
 ///|
