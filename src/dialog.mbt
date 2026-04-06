@@ -3,6 +3,10 @@
 ///
 /// `title` defaults to `"Message"` so callers can use the short form when only
 /// the message body matters. `level` defaults to `Info`.
+///
+/// The returned value starts with `DialogLabels::none()`, so callers can opt
+/// into custom captions later with `with_labels` when the chosen backend
+/// supports them.
 pub fn MessageDialog::new(
   message : StringView,
   title? : StringView = "Message",
@@ -42,7 +46,8 @@ pub fn MessageDialog::show(
 ///|
 /// Return the current native desktop platform.
 ///
-/// This is mainly useful for diagnostics, logging, and platform-aware tests.
+/// This reports the compile-time platform targeted by the native backend and is
+/// mainly useful for diagnostics, logging, and platform-aware tests.
 pub fn current_platform() -> Platform {
   current_platform_internal()
 }
@@ -52,6 +57,9 @@ pub fn current_platform() -> Platform {
 ///
 /// This is the smallest entry point for the library and is intended for the
 /// common case where a single title and message are enough.
+///
+/// It uses the same defaults as `MessageDialog::new` and returns the backend
+/// that successfully displayed the dialog.
 pub fn show_message(
   message : StringView,
   title? : StringView = "Message",
@@ -62,6 +70,9 @@ pub fn show_message(
 
 ///|
 /// Show an informational dialog using the `Info` level.
+///
+/// This is equivalent to `show_message(message, title~, level=Info)` and uses
+/// `"Information"` as the default title.
 pub fn show_info(
   message : StringView,
   title? : StringView = "Information",
@@ -71,6 +82,9 @@ pub fn show_info(
 
 ///|
 /// Show a warning dialog using the `Warning` level.
+///
+/// This is equivalent to `show_message(message, title~, level=Warning)` and
+/// uses `"Warning"` as the default title.
 pub fn show_warning(
   message : StringView,
   title? : StringView = "Warning",
@@ -80,6 +94,9 @@ pub fn show_warning(
 
 ///|
 /// Show an error dialog using the `Error` level.
+///
+/// This is equivalent to `show_message(message, title~, level=Error)` and uses
+/// `"Error"` as the default title.
 pub fn show_error(
   message : StringView,
   title? : StringView = "Error",

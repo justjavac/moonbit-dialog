@@ -46,6 +46,7 @@ test "file filter encoding escapes separators" {
 }
 
 ///|
+/// Encode a path list using the same escaped wire format as the native stubs.
 fn encode_path_list_for_test(paths : Array[String]) -> Bytes {
   let encoded : Array[String] = []
   for path in paths {

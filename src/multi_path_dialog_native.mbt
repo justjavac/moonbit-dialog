@@ -3,6 +3,7 @@
 const MULTI_PATH_DIALOG_BUFFER_SIZE : Int = 262144
 
 ///|
+/// Show a native multi-file dialog and write serialized paths into `path_out`.
 #borrow(title, directory, filters, path_out)
 extern "c" fn open_files_dialog_ffi(
   title : Bytes,
@@ -13,6 +14,7 @@ extern "c" fn open_files_dialog_ffi(
 ) -> Int = "moonbit_dialog_open_files"
 
 ///|
+/// Decode a raw native multi-path dialog status and selected paths.
 fn decode_multi_path_dialog_outcome(
   platform : Platform,
   raw : Int,
@@ -42,6 +44,7 @@ fn decode_multi_path_dialog_outcome(
 }
 
 ///|
+/// Show a multi-file open request through the native FFI and decode the result.
 fn show_open_files_request(
   title : String,
   directory : String,

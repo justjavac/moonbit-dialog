@@ -1,5 +1,9 @@
 ///|
 /// Create a named file filter for open/save dialogs.
+///
+/// `patterns` is copied defensively so later mutations to the caller-owned
+/// array do not affect the dialog request. Backends may ignore filters that do
+/// not contain any patterns.
 pub fn FileFilter::new(
   name : StringView,
   patterns : Array[String],
@@ -9,6 +13,9 @@ pub fn FileFilter::new(
 
 ///|
 /// Attach filename filters to an open-file dialog.
+///
+/// This replaces any existing filters, copies the provided array defensively,
+/// and preserves the dialog title and starting directory.
 pub fn OpenFileDialog::with_filters(
   self : OpenFileDialog,
   filters : Array[FileFilter],
@@ -22,6 +29,10 @@ pub fn OpenFileDialog::with_filters(
 
 ///|
 /// Attach filename filters to a save-file dialog.
+///
+/// This replaces any existing filters, copies the provided array defensively,
+/// and preserves the dialog title, directory, file name, and default
+/// extension.
 pub fn SaveFileDialog::with_filters(
   self : SaveFileDialog,
   filters : Array[FileFilter],
@@ -37,6 +48,9 @@ pub fn SaveFileDialog::with_filters(
 
 ///|
 /// Set a default file extension for a save-file dialog.
+///
+/// This updates only the stored default extension and preserves the current
+/// title, directory, file name, and filters.
 pub fn SaveFileDialog::with_default_extension(
   self : SaveFileDialog,
   extension : StringView,
@@ -51,11 +65,13 @@ pub fn SaveFileDialog::with_default_extension(
 }
 
 ///|
+/// Copy a single file filter and duplicate its pattern array.
 fn copy_file_filter(filter : FileFilter) -> FileFilter {
   { name: filter.name, patterns: filter.patterns.copy() }
 }
 
 ///|
+/// Copy a filter list so dialog builders do not retain caller-owned arrays.
 fn copy_file_filters(filters : Array[FileFilter]) -> Array[FileFilter] {
   let copied : Array[FileFilter] = []
   for filter in filters {
@@ -65,6 +81,10 @@ fn copy_file_filters(filters : Array[FileFilter]) -> Array[FileFilter] {
 }
 
 ///|
+/// Attach filename filters to a multi-file open dialog.
+///
+/// This replaces any existing filters, copies the provided array defensively,
+/// and preserves the dialog title and starting directory.
 pub fn OpenFilesDialog::with_filters(
   self : OpenFilesDialog,
   filters : Array[FileFilter],
@@ -77,6 +97,7 @@ pub fn OpenFilesDialog::with_filters(
 }
 
 ///|
+/// Escape separator characters before serializing a filter or path component.
 fn escape_serialized_component(text : String) -> String {
   let builder = StringBuilder::new(size_hint=text.length())
   for ch in text {
@@ -92,6 +113,7 @@ fn escape_serialized_component(text : String) -> String {
 }
 
 ///|
+/// Restore escaped separator characters from a serialized component.
 fn unescape_serialized_component(text : StringView) -> String {
   let builder = StringBuilder::new()
   let mut is_escaped = false
@@ -117,6 +139,7 @@ fn unescape_serialized_component(text : StringView) -> String {
 }
 
 ///|
+/// Serialize file filters into the UTF-8 format expected by the native stubs.
 fn encode_file_filters(filters : Array[FileFilter]) -> Bytes {
   if filters.length() == 0 {
     return encode_utf8_bytes("")
@@ -137,6 +160,7 @@ fn encode_file_filters(filters : Array[FileFilter]) -> Bytes {
 }
 
 ///|
+/// Decode a newline-delimited UTF-8 path list emitted by the native stubs.
 fn decode_path_list(bytes : Bytes) -> Array[String] {
   let raw = utf8_bytes_to_mbt_string(bytes)
   if raw == "" {

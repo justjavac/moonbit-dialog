@@ -2,6 +2,9 @@
 /// Create a yes-or-no confirmation dialog request.
 ///
 /// `title` defaults to `"Confirm"` and `level` defaults to `Question`.
+///
+/// The dialog starts with `DialogLabels::none()`, which keeps native button
+/// captions until callers explicitly override them with `with_labels`.
 pub fn ConfirmDialog::new(
   message : StringView,
   title? : StringView = "Confirm",
@@ -17,6 +20,9 @@ pub fn ConfirmDialog::new(
 
 ///|
 /// Show a confirmation dialog and return both the backend and the response.
+///
+/// The result distinguishes which backend handled the request and whether the
+/// user picked the affirmative or negative action.
 pub fn ConfirmDialog::show(
   self : ConfirmDialog,
 ) -> Result[DialogOutcome, DialogError] {
@@ -25,6 +31,10 @@ pub fn ConfirmDialog::show(
 
 ///|
 /// Ask a yes-or-no question without constructing `ConfirmDialog` manually.
+///
+/// This convenience function uses the same defaults as `ConfirmDialog::new`
+/// and returns the selected response together with the backend that displayed
+/// the dialog.
 pub fn ask_yes_no(
   message : StringView,
   title? : StringView = "Confirm",
