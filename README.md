@@ -5,16 +5,7 @@
 [![macos](https://img.shields.io/codecov/c/github/justjavac/moonbit-dialog/main?flag=macos&label=macos)](https://codecov.io/gh/justjavac/moonbit-dialog)
 [![windows](https://img.shields.io/codecov/c/github/justjavac/moonbit-dialog/main?flag=windows&label=windows)](https://codecov.io/gh/justjavac/moonbit-dialog)
 
-`moonbit-dialog` is a native-only MoonBit library that shows a simple message dialog on Windows, macOS, and Linux.
-
-This repository intentionally starts with a very small surface area:
-
-- one public dialog type
-- one convenience function
-- one cross-platform result model
-- one message box implementation
-
-That keeps the first version easy to read, test, and extend when we add richer dialog types later.
+`moonbit-dialog` is a native-only MoonBit library that shows dialog on Windows, macOS, and Linux.
 
 ## Features
 
@@ -24,17 +15,6 @@ That keeps the first version easy to read, test, and extend when we add richer d
 - Detailed public API documentation in source
 - Coverage-aware tests plus Codecov badges
 - Example program under [`examples/`](./examples)
-
-## Project Layout
-
-```text
-.
-|-- src/                  # main MoonBit package
-|-- examples/             # example MoonBit submodule
-|-- .github/workflows/    # CI and coverage upload
-|-- README.md             # detailed GitHub README
-`-- README.mbt.md         # concise package README
-```
 
 ## Installation
 
@@ -119,18 +99,6 @@ Generate a local coverage report with:
 ```bash
 moon coverage analyze -p justjavac/dialog -- -f cobertura -o coverage.xml
 ```
-
-## CI and Coverage
-
-GitHub Actions runs the native test suite on:
-
-- Ubuntu
-- macOS
-- Windows
-
-Each platform uploads a separate Codecov flag so the README can expose total, Linux, macOS, and Windows badges.
-
-Badges only update after CI runs on the repository's `main` branch and Codecov finishes processing the uploaded reports.
 
 ## Scope of This Version
 
