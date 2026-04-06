@@ -1,4 +1,13 @@
 ///|
+test "run_path_dialog_request can decode callback-generated cancellations" {
+  let result = run_path_dialog_request(path_out => {
+    ignore(path_out.length())
+    success_status_for_test(WindowsWin32, response=Cancel)
+  })
+  assert_eq(result, Ok({ backend: WindowsWin32, selection: Cancelled }))
+}
+
+///|
 test "path dialog selection keeps the selected path" {
   let result = decode_path_dialog_outcome(
     Windows,
@@ -63,6 +72,15 @@ test "path list encoding keeps separators round-trippable" {
   assert_eq(decode_path_list(encoded), [
     "C:/Temp/a.txt", "D:\\Projects\\notes.md", "line\nbreak.txt",
   ])
+}
+
+///|
+test "run_multi_path_dialog_request can decode callback-generated cancellations" {
+  let result = run_multi_path_dialog_request(path_out => {
+    ignore(path_out.length())
+    success_status_for_test(LinuxZenity, response=Cancel)
+  })
+  assert_eq(result, Ok({ backend: LinuxZenity, selection: Cancelled }))
 }
 
 ///|

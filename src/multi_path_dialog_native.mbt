@@ -37,9 +37,18 @@ fn decode_multi_path_dialog_outcome(
 }
 
 ///|
-/// Allocate the fixed output buffer used by native multi-path dialogs.
-fn make_multi_path_dialog_output_buffer() -> Bytes {
-  Bytes::new(MULTI_PATH_DIALOG_BUFFER_SIZE)
+/// Run a multi-path dialog callback and decode its raw native result.
+fn run_multi_path_dialog_request(
+  callback : (Bytes) -> Int,
+) -> Result[MultiPathDialogOutcome, DialogError] {
+  match supported_platform_result() {
+    Ok(platform) => {
+      let path_out = Bytes::new(MULTI_PATH_DIALOG_BUFFER_SIZE)
+      let raw_result = callback(path_out)
+      decode_multi_path_dialog_outcome(platform, raw_result, path_out)
+    }
+    Err(error) => Err(error)
+  }
 }
 
 ///|
@@ -49,16 +58,14 @@ fn show_open_files_request(
   directory : String,
   filters : Array[FileFilter],
 ) -> Result[MultiPathDialogOutcome, DialogError] {
-  with_supported_platform(platform => {
-    let encoded_filters = encode_file_filters(filters)
-    let path_out = make_multi_path_dialog_output_buffer()
-    let raw_result = open_files_dialog_ffi(
+  let encoded_filters = encode_file_filters(filters)
+  run_multi_path_dialog_request(path_out => {
+    open_files_dialog_ffi(
       encode_utf8_bytes(title),
       encode_utf8_bytes(directory),
       encoded_filters,
       path_out,
       path_out.length(),
     )
-    decode_multi_path_dialog_outcome(platform, raw_result, path_out)
   })
 }
