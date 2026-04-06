@@ -1,0 +1,7 @@
+import {
+  "justjavac/dialog",
+}
+
+options(
+  "is-main": true,
+)
