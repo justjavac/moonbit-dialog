@@ -4,7 +4,7 @@ pub fn OpenFileDialog::new(
   title? : StringView = "Open File",
   directory? : StringView = "",
 ) -> OpenFileDialog {
-  { title: title.to_string(), directory: directory.to_string() }
+  { title: title.to_string(), directory: directory.to_string(), filters: [] }
 }
 
 ///|
@@ -12,7 +12,7 @@ pub fn OpenFileDialog::new(
 pub fn OpenFileDialog::show(
   self : OpenFileDialog,
 ) -> Result[PathDialogOutcome, DialogError] {
-  show_open_file_request(self.title, self.directory)
+  show_open_file_request(self.title, self.directory, self.filters)
 }
 
 ///|
@@ -35,6 +35,8 @@ pub fn SaveFileDialog::new(
     title: title.to_string(),
     directory: directory.to_string(),
     file_name: file_name.to_string(),
+    filters: [],
+    default_extension: "",
   }
 }
 
@@ -43,7 +45,13 @@ pub fn SaveFileDialog::new(
 pub fn SaveFileDialog::show(
   self : SaveFileDialog,
 ) -> Result[PathDialogOutcome, DialogError] {
-  show_save_file_request(self.title, self.directory, self.file_name)
+  show_save_file_request(
+    self.title,
+    self.directory,
+    self.file_name,
+    self.filters,
+    self.default_extension,
+  )
 }
 
 ///|

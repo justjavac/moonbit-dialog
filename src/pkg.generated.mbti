@@ -104,6 +104,12 @@ pub(all) enum DialogResponse {
   No
 } derive(Eq, Show)
 
+pub struct FileFilter {
+  name : String
+  patterns : Array[String]
+} derive(Eq, Show)
+pub fn FileFilter::new(StringView, Array[String]) -> Self
+
 pub struct MessageDialog {
   title : String
   message : String
@@ -117,9 +123,11 @@ pub fn MessageDialog::with_labels(Self, DialogLabels) -> Self
 pub struct OpenFileDialog {
   title : String
   directory : String
+  filters : Array[FileFilter]
 } derive(Eq, Show)
 pub fn OpenFileDialog::new(title? : StringView, directory? : StringView) -> Self
 pub fn OpenFileDialog::show(Self) -> Result[PathDialogOutcome, DialogError]
+pub fn OpenFileDialog::with_filters(Self, Array[FileFilter]) -> Self
 
 pub struct PathDialogOutcome {
   backend : DialogBackend
@@ -142,9 +150,13 @@ pub struct SaveFileDialog {
   title : String
   directory : String
   file_name : String
+  filters : Array[FileFilter]
+  default_extension : String
 } derive(Eq, Show)
 pub fn SaveFileDialog::new(title? : StringView, directory? : StringView, file_name? : StringView) -> Self
 pub fn SaveFileDialog::show(Self) -> Result[PathDialogOutcome, DialogError]
+pub fn SaveFileDialog::with_default_extension(Self, StringView) -> Self
+pub fn SaveFileDialog::with_filters(Self, Array[FileFilter]) -> Self
 
 pub struct SelectFolderDialog {
   title : String

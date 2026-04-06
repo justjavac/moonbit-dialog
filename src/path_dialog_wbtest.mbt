@@ -30,3 +30,17 @@ test "path dialog failure keeps backend and detail" {
   )
   assert_eq(result, Err(BackendFailed(LinuxZenity, 42)))
 }
+
+///|
+test "file filter encoding escapes separators" {
+  let encoded = encode_file_filters([
+    FileFilter::{
+      name: "Source\tFiles",
+      patterns: ["*.mbt", "*.txt\nbackup", "literal\\name"],
+    },
+  ])
+  assert_eq(
+    utf8_bytes_to_mbt_string(encoded),
+    "Source\\tFiles\t*.mbt\t*.txt\\nbackup\tliteral\\\\name",
+  )
+}

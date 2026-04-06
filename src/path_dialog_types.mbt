@@ -6,6 +6,13 @@ pub(all) enum PathDialogSelection {
 } derive(Eq, Show)
 
 ///|
+/// A named set of filename patterns for open/save dialogs.
+pub struct FileFilter {
+  name : String
+  patterns : Array[String]
+} derive(Eq, Show)
+
+///|
 /// A completed path dialog result including the backend and the selection.
 pub struct PathDialogOutcome {
   backend : DialogBackend
@@ -17,6 +24,7 @@ pub struct PathDialogOutcome {
 pub struct OpenFileDialog {
   title : String
   directory : String
+  filters : Array[FileFilter]
 } derive(Eq, Show)
 
 ///|
@@ -25,6 +33,8 @@ pub struct SaveFileDialog {
   title : String
   directory : String
   file_name : String
+  filters : Array[FileFilter]
+  default_extension : String
 } derive(Eq, Show)
 
 ///|

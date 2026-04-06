@@ -11,20 +11,23 @@ const PATH_DIALOG_SELECTED_CODE : Int = 0
 const PATH_DIALOG_CANCELLED_CODE : Int = 1
 
 ///|
-#borrow(title, directory, path_out)
+#borrow(title, directory, filters, path_out)
 extern "c" fn open_file_dialog_ffi(
   title : Bytes,
   directory : Bytes,
+  filters : Bytes,
   path_out : Bytes,
   path_out_len : Int,
 ) -> Int = "moonbit_dialog_open_file"
 
 ///|
-#borrow(title, directory, file_name, path_out)
+#borrow(title, directory, file_name, filters, default_extension, path_out)
 extern "c" fn save_file_dialog_ffi(
   title : Bytes,
   directory : Bytes,
   file_name : Bytes,
+  filters : Bytes,
+  default_extension : Bytes,
   path_out : Bytes,
   path_out_len : Int,
 ) -> Int = "moonbit_dialog_save_file"
@@ -79,15 +82,18 @@ fn decode_path_dialog_outcome(
 fn show_open_file_request(
   title : String,
   directory : String,
+  filters : Array[FileFilter],
 ) -> Result[PathDialogOutcome, DialogError] {
   let platform = current_platform_internal()
   if platform == Unknown {
     return Err(UnsupportedPlatform(Unknown))
   }
+  let encoded_filters = encode_file_filters(filters)
   let path_out = Bytes::new(PATH_DIALOG_BUFFER_SIZE)
   let raw_result = open_file_dialog_ffi(
     encode_utf8_bytes(title),
     encode_utf8_bytes(directory),
+    encoded_filters,
     path_out,
     path_out.length(),
   )
@@ -99,16 +105,21 @@ fn show_save_file_request(
   title : String,
   directory : String,
   file_name : String,
+  filters : Array[FileFilter],
+  default_extension : String,
 ) -> Result[PathDialogOutcome, DialogError] {
   let platform = current_platform_internal()
   if platform == Unknown {
     return Err(UnsupportedPlatform(Unknown))
   }
+  let encoded_filters = encode_file_filters(filters)
   let path_out = Bytes::new(PATH_DIALOG_BUFFER_SIZE)
   let raw_result = save_file_dialog_ffi(
     encode_utf8_bytes(title),
     encode_utf8_bytes(directory),
     encode_utf8_bytes(file_name),
+    encoded_filters,
+    encode_utf8_bytes(default_extension),
     path_out,
     path_out.length(),
   )

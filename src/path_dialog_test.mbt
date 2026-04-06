@@ -6,6 +6,7 @@ test "OpenFileDialog::new uses the provided title and directory" {
   )
   assert_eq(dialog.title, "Open a project file")
   assert_eq(dialog.directory, "C:/Projects")
+  assert_eq(dialog.filters, [])
 }
 
 ///|
@@ -13,6 +14,24 @@ test "OpenFileDialog::new uses default values" {
   let dialog = @dialog.OpenFileDialog::new()
   assert_eq(dialog.title, "Open File")
   assert_eq(dialog.directory, "")
+  assert_eq(dialog.filters, [])
+}
+
+///|
+test "FileFilter::new stores its name and patterns" {
+  let patterns = ["*.png", "*.jpg"]
+  let filter = @dialog.FileFilter::new("Images", patterns)
+  patterns.push("*.gif")
+  assert_eq(filter.name, "Images")
+  assert_eq(filter.patterns, ["*.png", "*.jpg"])
+}
+
+///|
+test "OpenFileDialog::with_filters replaces filters" {
+  let filters = [@dialog.FileFilter::new("Text", ["*.txt", "*.md"])]
+  let dialog = @dialog.OpenFileDialog::new().with_filters(filters)
+  filters.push(@dialog.FileFilter::new("Images", ["*.png"]))
+  assert_eq(dialog.filters, [@dialog.FileFilter::new("Text", ["*.txt", "*.md"])])
 }
 
 ///|
@@ -25,6 +44,8 @@ test "SaveFileDialog::new stores title directory and file name" {
   assert_eq(dialog.title, "Export report")
   assert_eq(dialog.directory, "C:/Reports")
   assert_eq(dialog.file_name, "weekly.txt")
+  assert_eq(dialog.filters, [])
+  assert_eq(dialog.default_extension, "")
 }
 
 ///|
@@ -33,6 +54,19 @@ test "SaveFileDialog::new uses default values" {
   assert_eq(dialog.title, "Save File")
   assert_eq(dialog.directory, "")
   assert_eq(dialog.file_name, "")
+  assert_eq(dialog.filters, [])
+  assert_eq(dialog.default_extension, "")
+}
+
+///|
+test "SaveFileDialog builders keep filters and default extension" {
+  let filters = [@dialog.FileFilter::new("Text", ["*.txt"])]
+  let dialog = @dialog.SaveFileDialog::new(file_name="report")
+    .with_filters(filters)
+    .with_default_extension("txt")
+  assert_eq(dialog.file_name, "report")
+  assert_eq(dialog.filters, filters)
+  assert_eq(dialog.default_extension, "txt")
 }
 
 ///|
