@@ -46,6 +46,14 @@ test "OpenFilesDialog::new uses the provided title and directory" {
 }
 
 ///|
+test "OpenFilesDialog::new uses default values" {
+  let dialog = @dialog.OpenFilesDialog::new()
+  assert_eq(dialog.title, "Open Files")
+  assert_eq(dialog.directory, "")
+  assert_eq(dialog.filters, [])
+}
+
+///|
 test "OpenFilesDialog::with_filters replaces filters" {
   let filters = [@dialog.FileFilter::new("Source", ["*.mbt", "*.c"])]
   let dialog = @dialog.OpenFilesDialog::new().with_filters(filters)
