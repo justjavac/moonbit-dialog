@@ -1,4 +1,5 @@
 ///|
+/// Run the open, save, and folder picker examples.
 fn main {
   let filters = [
     @dialog.FileFilter::new("Text Files", ["*.txt", "*.md"]),

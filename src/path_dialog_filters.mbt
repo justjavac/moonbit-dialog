@@ -4,6 +4,9 @@
 /// `patterns` is copied defensively so later mutations to the caller-owned
 /// array do not affect the dialog request. Backends may ignore filters that do
 /// not contain any patterns.
+///
+/// Typical patterns look like `"*.txt"` or `"*.png"`, and several patterns can
+/// be grouped under the same display name.
 pub fn FileFilter::new(
   name : StringView,
   patterns : Array[String],
@@ -16,6 +19,9 @@ pub fn FileFilter::new(
 ///
 /// This replaces any existing filters, copies the provided array defensively,
 /// and preserves the dialog title and starting directory.
+///
+/// Use this when you want the picker UI to emphasize a narrow set of file
+/// types while keeping the original request immutable.
 pub fn OpenFileDialog::with_filters(
   self : OpenFileDialog,
   filters : Array[FileFilter],
@@ -33,6 +39,9 @@ pub fn OpenFileDialog::with_filters(
 /// This replaces any existing filters, copies the provided array defensively,
 /// and preserves the dialog title, directory, file name, and default
 /// extension.
+///
+/// The native backend may apply these filters differently, but the request
+/// always keeps the full structured filter list.
 pub fn SaveFileDialog::with_filters(
   self : SaveFileDialog,
   filters : Array[FileFilter],
@@ -51,6 +60,9 @@ pub fn SaveFileDialog::with_filters(
 ///
 /// This updates only the stored default extension and preserves the current
 /// title, directory, file name, and filters.
+///
+/// Callers may pass either `"txt"` or `".txt"`; the native layer normalizes
+/// the value before appending it to extensionless paths.
 pub fn SaveFileDialog::with_default_extension(
   self : SaveFileDialog,
   extension : StringView,
@@ -85,6 +97,9 @@ fn copy_file_filters(filters : Array[FileFilter]) -> Array[FileFilter] {
 ///
 /// This replaces any existing filters, copies the provided array defensively,
 /// and preserves the dialog title and starting directory.
+///
+/// It behaves like `OpenFileDialog::with_filters`, but targets the multi-select
+/// request type instead.
 pub fn OpenFilesDialog::with_filters(
   self : OpenFilesDialog,
   filters : Array[FileFilter],
