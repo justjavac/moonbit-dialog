@@ -14,8 +14,8 @@ pub fn ConfirmDialog::new(
   level? : DialogLevel = Question,
 ) -> ConfirmDialog {
   {
-    title: title.to_string(),
-    message: message.to_string(),
+    title: title.to_owned(),
+    message: message.to_owned(),
     level,
     labels: DialogLabels::none(),
   }

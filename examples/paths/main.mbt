@@ -15,10 +15,11 @@ fn main {
     .show() {
     Ok(outcome) =>
       match outcome.selection {
-        Selected(path) => println("Opened \{path} with \{outcome.backend}")
+        Selected(path) =>
+          println("Opened \{path} with \{to_repr(outcome.backend)}")
         Cancelled => println("Open file cancelled")
       }
-    Err(error) => println("Open file failed: \{error}")
+    Err(error) => println("Open file failed: \{to_repr(error)}")
   }
 
   match
@@ -32,10 +33,11 @@ fn main {
     .show() {
     Ok(outcome) =>
       match outcome.selection {
-        Selected(path) => println("Saving to \{path} with \{outcome.backend}")
+        Selected(path) =>
+          println("Saving to \{path} with \{to_repr(outcome.backend)}")
         Cancelled => println("Save file cancelled")
       }
-    Err(error) => println("Save file failed: \{error}")
+    Err(error) => println("Save file failed: \{to_repr(error)}")
   }
 
   match
@@ -46,9 +48,9 @@ fn main {
     Ok(outcome) =>
       match outcome.selection {
         Selected(path) =>
-          println("Selected folder \{path} with \{outcome.backend}")
+          println("Selected folder \{path} with \{to_repr(outcome.backend)}")
         Cancelled => println("Folder selection cancelled")
       }
-    Err(error) => println("Select folder failed: \{error}")
+    Err(error) => println("Select folder failed: \{to_repr(error)}")
   }
 }

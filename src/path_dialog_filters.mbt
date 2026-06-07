@@ -11,7 +11,7 @@ pub fn FileFilter::new(
   name : StringView,
   patterns : Array[String],
 ) -> FileFilter {
-  { name: name.to_string(), patterns: patterns.copy() }
+  { name: name.to_owned(), patterns: patterns.copy() }
 }
 
 ///|
@@ -72,7 +72,7 @@ pub fn SaveFileDialog::with_default_extension(
     directory: self.directory,
     file_name: self.file_name,
     filters: copy_file_filters(self.filters),
-    default_extension: extension.to_string(),
+    default_extension: extension.to_owned(),
   }
 }
 
@@ -132,7 +132,7 @@ fn escape_serialized_component(text : String) -> String {
 fn unescape_serialized_component(text : StringView) -> String {
   let builder = StringBuilder::new()
   let mut is_escaped = false
-  for ch in text.to_string() {
+  for ch in text.to_owned() {
     if is_escaped {
       match ch {
         'n' => builder.write_char('\n')

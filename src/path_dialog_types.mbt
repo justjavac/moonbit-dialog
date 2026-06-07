@@ -3,35 +3,35 @@
 pub(all) enum PathDialogSelection {
   Selected(String)
   Cancelled
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// A named set of filename patterns for open/save dialogs.
 pub struct FileFilter {
   name : String
   patterns : Array[String]
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// A completed path dialog result including the backend and the selection.
 pub struct PathDialogOutcome {
   backend : DialogBackend
   selection : PathDialogSelection
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// The result of a multi-path dialog.
 pub(all) enum MultiPathSelection {
   Selected(Array[String])
   Cancelled
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// A completed multi-path dialog result including the backend and the selection.
 pub struct MultiPathDialogOutcome {
   backend : DialogBackend
   selection : MultiPathSelection
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// An open-file dialog request.
@@ -39,7 +39,7 @@ pub struct OpenFileDialog {
   title : String
   directory : String
   filters : Array[FileFilter]
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// A save-file dialog request.
@@ -49,7 +49,7 @@ pub struct SaveFileDialog {
   file_name : String
   filters : Array[FileFilter]
   default_extension : String
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// A multi-file open dialog request.
@@ -57,11 +57,11 @@ pub struct OpenFilesDialog {
   title : String
   directory : String
   filters : Array[FileFilter]
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// A folder-selection dialog request.
 pub struct SelectFolderDialog {
   title : String
   directory : String
-} derive(Eq, Show)
+} derive(Eq, Debug)

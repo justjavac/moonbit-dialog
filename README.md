@@ -38,8 +38,8 @@ let result = @dialog.show_message(
 )
 
 match result {
-  Ok(backend) => println("Dialog shown with \{backend}")
-  Err(error) => println("Dialog failed: \{error}")
+  Ok(backend) => println("Dialog shown with \{to_repr(backend)}")
+  Err(error) => println("Dialog failed: \{to_repr(error)}")
 }
 ```
 
@@ -53,8 +53,8 @@ let dialog = @dialog.MessageDialog::new(
 )
 
 match dialog.show() {
-  Ok(backend) => println("Dialog shown with \{backend}")
-  Err(error) => println("Dialog failed: \{error}")
+  Ok(backend) => println("Dialog shown with \{to_repr(backend)}")
+  Err(error) => println("Dialog failed: \{to_repr(error)}")
 }
 ```
 
@@ -71,11 +71,11 @@ Use `ConfirmDialog` or `ask_yes_no` when you need a typed answer:
 match @dialog.ask_yes_no("Overwrite the existing build output?") {
   Ok(outcome) =>
     match outcome.response {
-      Yes => println("Continuing with \{outcome.backend}")
+      Yes => println("Continuing with \{to_repr(outcome.backend)}")
       No => println("Cancelled by user")
       _ => ()
     }
-  Err(error) => println("Dialog failed: \{error}")
+  Err(error) => println("Dialog failed: \{to_repr(error)}")
 }
 ```
 
@@ -87,8 +87,11 @@ match @dialog.show_dialog(
   buttons=YesNoCancel,
   level=Question,
 ) {
-  Ok(outcome) => println("Selected \{outcome.response} with \{outcome.backend}")
-  Err(error) => println("Dialog failed: \{error}")
+  Ok(outcome) =>
+    println(
+      "Selected \{to_repr(outcome.response)} with \{to_repr(outcome.backend)}",
+    )
+  Err(error) => println("Dialog failed: \{to_repr(error)}")
 }
 ```
 
@@ -115,10 +118,11 @@ guess whether an empty string means “cancelled”:
 match @dialog.open_file(directory="C:/Projects") {
   Ok(outcome) =>
     match outcome.selection {
-      Selected(path) => println("Picked \{path} with \{outcome.backend}")
+      Selected(path) =>
+        println("Picked \{path} with \{to_repr(outcome.backend)}")
       Cancelled => println("User cancelled the picker")
     }
-  Err(error) => println("Dialog failed: \{error}")
+  Err(error) => println("Dialog failed: \{to_repr(error)}")
 }
 ```
 
@@ -140,7 +144,7 @@ match @dialog.SaveFileDialog::new(file_name="report")
       Selected(path) => println("Saving to \{path}")
       Cancelled => println("User cancelled the picker")
     }
-  Err(error) => println("Dialog failed: \{error}")
+  Err(error) => println("Dialog failed: \{to_repr(error)}")
 }
 ```
 
@@ -157,7 +161,7 @@ match @dialog.OpenFilesDialog::new(directory="C:/Projects")
       Selected(paths) => println("Picked \{paths.length()} files")
       Cancelled => println("User cancelled the picker")
     }
-  Err(error) => println("Dialog failed: \{error}")
+  Err(error) => println("Dialog failed: \{to_repr(error)}")
 }
 ```
 

@@ -1,6 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "justjavac/dialog"
 
+import {
+  "moonbitlang/core/debug",
+}
+
 // Values
 pub fn ask_yes_no(StringView, title? : StringView, level? : DialogLevel) -> Result[DialogOutcome, DialogError]
 
@@ -39,7 +43,7 @@ pub struct ChoiceDialog {
   level : DialogLevel
   buttons : DialogButtons
   labels : DialogLabels
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub fn ChoiceDialog::new(StringView, title? : StringView, buttons? : DialogButtons, level? : DialogLevel) -> Self
 pub fn ChoiceDialog::show(Self) -> Result[DialogOutcome, DialogError]
 pub fn ChoiceDialog::with_labels(Self, DialogLabels) -> Self
@@ -49,7 +53,7 @@ pub struct ConfirmDialog {
   message : String
   level : DialogLevel
   labels : DialogLabels
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub fn ConfirmDialog::new(StringView, title? : StringView, level? : DialogLevel) -> Self
 pub fn ConfirmDialog::show(Self) -> Result[DialogOutcome, DialogError]
 pub fn ConfirmDialog::with_labels(Self, DialogLabels) -> Self
@@ -61,26 +65,26 @@ pub(all) enum DialogBackend {
   LinuxZenity
   LinuxKDialog
   LinuxXMessage
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 pub(all) enum DialogButtons {
   Ok
   OkCancel
   YesNo
   YesNoCancel
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 pub(all) enum DialogError {
   UnsupportedPlatform(Platform)
   BackendUnavailable(Platform)
   BackendFailed(DialogBackend, Int)
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 pub struct DialogLabels {
   accept : String
   reject : String
   cancel : String
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub fn DialogLabels::none() -> Self
 pub fn DialogLabels::ok(StringView) -> Self
 pub fn DialogLabels::ok_cancel(StringView, StringView) -> Self
@@ -92,24 +96,24 @@ pub(all) enum DialogLevel {
   Warning
   Error
   Question
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 pub struct DialogOutcome {
   backend : DialogBackend
   response : DialogResponse
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 pub(all) enum DialogResponse {
   Ok
   Cancel
   Yes
   No
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 pub struct FileFilter {
   name : String
   patterns : Array[String]
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub fn FileFilter::new(StringView, Array[String]) -> Self
 
 pub struct MessageDialog {
@@ -117,7 +121,7 @@ pub struct MessageDialog {
   message : String
   level : DialogLevel
   labels : DialogLabels
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub fn MessageDialog::new(StringView, title? : StringView, level? : DialogLevel) -> Self
 pub fn MessageDialog::show(Self) -> Result[DialogBackend, DialogError]
 pub fn MessageDialog::with_labels(Self, DialogLabels) -> Self
@@ -125,18 +129,18 @@ pub fn MessageDialog::with_labels(Self, DialogLabels) -> Self
 pub struct MultiPathDialogOutcome {
   backend : DialogBackend
   selection : MultiPathSelection
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 pub(all) enum MultiPathSelection {
   Selected(Array[String])
   Cancelled
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 pub struct OpenFileDialog {
   title : String
   directory : String
   filters : Array[FileFilter]
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub fn OpenFileDialog::new(title? : StringView, directory? : StringView) -> Self
 pub fn OpenFileDialog::show(Self) -> Result[PathDialogOutcome, DialogError]
 pub fn OpenFileDialog::with_filters(Self, Array[FileFilter]) -> Self
@@ -145,7 +149,7 @@ pub struct OpenFilesDialog {
   title : String
   directory : String
   filters : Array[FileFilter]
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub fn OpenFilesDialog::new(title? : StringView, directory? : StringView) -> Self
 pub fn OpenFilesDialog::show(Self) -> Result[MultiPathDialogOutcome, DialogError]
 pub fn OpenFilesDialog::with_filters(Self, Array[FileFilter]) -> Self
@@ -153,19 +157,19 @@ pub fn OpenFilesDialog::with_filters(Self, Array[FileFilter]) -> Self
 pub struct PathDialogOutcome {
   backend : DialogBackend
   selection : PathDialogSelection
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 pub(all) enum PathDialogSelection {
   Selected(String)
   Cancelled
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 pub(all) enum Platform {
   Windows
   MacOS
   Linux
   Unknown
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 pub struct SaveFileDialog {
   title : String
@@ -173,7 +177,7 @@ pub struct SaveFileDialog {
   file_name : String
   filters : Array[FileFilter]
   default_extension : String
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub fn SaveFileDialog::new(title? : StringView, directory? : StringView, file_name? : StringView) -> Self
 pub fn SaveFileDialog::show(Self) -> Result[PathDialogOutcome, DialogError]
 pub fn SaveFileDialog::with_default_extension(Self, StringView) -> Self
@@ -182,7 +186,7 @@ pub fn SaveFileDialog::with_filters(Self, Array[FileFilter]) -> Self
 pub struct SelectFolderDialog {
   title : String
   directory : String
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub fn SelectFolderDialog::new(title? : StringView, directory? : StringView) -> Self
 pub fn SelectFolderDialog::show(Self) -> Result[PathDialogOutcome, DialogError]
 

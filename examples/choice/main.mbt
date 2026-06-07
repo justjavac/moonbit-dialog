@@ -10,11 +10,13 @@ fn main {
 
   match dialog.show() {
     Ok(outcome) => {
-      println("Selected \{outcome.response} with \{outcome.backend}")
+      println(
+        "Selected \{to_repr(outcome.response)} with \{to_repr(outcome.backend)}",
+      )
       println(
         "Custom labels applied: \{@dialog.supports_custom_labels(outcome.backend)}",
       )
     }
-    Err(error) => println("Dialog failed: \{error}")
+    Err(error) => println("Dialog failed: \{to_repr(error)}")
   }
 }

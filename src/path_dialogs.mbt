@@ -11,7 +11,7 @@ pub fn OpenFileDialog::new(
   title? : StringView = "Open File",
   directory? : StringView = "",
 ) -> OpenFileDialog {
-  { title: title.to_string(), directory: directory.to_string(), filters: [] }
+  { title: title.to_owned(), directory: directory.to_owned(), filters: [] }
 }
 
 ///|
@@ -58,9 +58,9 @@ pub fn SaveFileDialog::new(
   file_name? : StringView = "",
 ) -> SaveFileDialog {
   {
-    title: title.to_string(),
-    directory: directory.to_string(),
-    file_name: file_name.to_string(),
+    title: title.to_owned(),
+    directory: directory.to_owned(),
+    file_name: file_name.to_owned(),
     filters: [],
     default_extension: "",
   }
@@ -115,7 +115,7 @@ pub fn SelectFolderDialog::new(
   title? : StringView = "Select Folder",
   directory? : StringView = "",
 ) -> SelectFolderDialog {
-  { title: title.to_string(), directory: directory.to_string() }
+  { title: title.to_owned(), directory: directory.to_owned() }
 }
 
 ///|

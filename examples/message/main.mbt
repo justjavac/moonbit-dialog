@@ -6,7 +6,7 @@ fn main {
       "Hello from the moonbit-dialog example.",
       title="moonbit-dialog",
     ) {
-    Ok(backend) => println("Dialog shown with \{backend}")
-    Err(error) => println("Dialog failed: \{error}")
+    Ok(backend) => println("Dialog shown with \{to_repr(backend)}")
+    Err(error) => println("Dialog failed: \{to_repr(error)}")
   }
 }

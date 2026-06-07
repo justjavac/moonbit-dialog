@@ -8,7 +8,7 @@ pub(all) enum Platform {
   MacOS
   Linux
   Unknown
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// The concrete backend that displayed a message dialog.
@@ -22,7 +22,7 @@ pub(all) enum DialogBackend {
   LinuxZenity
   LinuxKDialog
   LinuxXMessage
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// The requested severity or intent of a dialog.
@@ -34,7 +34,7 @@ pub(all) enum DialogLevel {
   Warning
   Error
   Question
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// The standard button combinations supported by the generic dialog API.
@@ -43,7 +43,7 @@ pub(all) enum DialogButtons {
   OkCancel
   YesNo
   YesNoCancel
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// The user's response to a dialog.
@@ -52,14 +52,14 @@ pub(all) enum DialogResponse {
   Cancel
   Yes
   No
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// A completed dialog result including the backend and the chosen response.
 pub struct DialogOutcome {
   backend : DialogBackend
   response : DialogResponse
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// Optional custom labels for the standard dialog buttons.
@@ -70,7 +70,7 @@ pub struct DialogLabels {
   accept : String
   reject : String
   cancel : String
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// Errors returned when a dialog cannot be shown.
@@ -82,7 +82,7 @@ pub(all) enum DialogError {
   UnsupportedPlatform(Platform)
   BackendUnavailable(Platform)
   BackendFailed(DialogBackend, Int)
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// A message dialog request.
@@ -94,7 +94,7 @@ pub struct MessageDialog {
   message : String
   level : DialogLevel
   labels : DialogLabels
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// A yes-or-no confirmation dialog request.
@@ -103,7 +103,7 @@ pub struct ConfirmDialog {
   message : String
   level : DialogLevel
   labels : DialogLabels
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// A generic dialog request with one of the standard button combinations.
@@ -113,4 +113,4 @@ pub struct ChoiceDialog {
   level : DialogLevel
   buttons : DialogButtons
   labels : DialogLabels
-} derive(Eq, Show)
+} derive(Eq, Debug)

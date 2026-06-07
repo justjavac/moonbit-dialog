@@ -19,7 +19,7 @@ pub fn DialogLabels::none() -> DialogLabels {
 /// This helper is primarily intended for `MessageDialog` or generic dialogs
 /// that use the `Ok` button layout.
 pub fn DialogLabels::ok(label : StringView) -> DialogLabels {
-  { accept: label.to_string(), reject: "", cancel: "" }
+  { accept: label.to_owned(), reject: "", cancel: "" }
 }
 
 ///|
@@ -34,7 +34,7 @@ pub fn DialogLabels::ok_cancel(
   ok_label : StringView,
   cancel_label : StringView,
 ) -> DialogLabels {
-  { accept: ok_label.to_string(), reject: "", cancel: cancel_label.to_string() }
+  { accept: ok_label.to_owned(), reject: "", cancel: cancel_label.to_owned() }
 }
 
 ///|
@@ -49,7 +49,7 @@ pub fn DialogLabels::yes_no(
   yes_label : StringView,
   no_label : StringView,
 ) -> DialogLabels {
-  { accept: yes_label.to_string(), reject: no_label.to_string(), cancel: "" }
+  { accept: yes_label.to_owned(), reject: no_label.to_owned(), cancel: "" }
 }
 
 ///|
@@ -66,9 +66,9 @@ pub fn DialogLabels::yes_no_cancel(
   cancel_label : StringView,
 ) -> DialogLabels {
   {
-    accept: yes_label.to_string(),
-    reject: no_label.to_string(),
-    cancel: cancel_label.to_string(),
+    accept: yes_label.to_owned(),
+    reject: no_label.to_owned(),
+    cancel: cancel_label.to_owned(),
   }
 }
 

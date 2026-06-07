@@ -16,8 +16,8 @@ pub fn MessageDialog::new(
   level? : DialogLevel = Info,
 ) -> MessageDialog {
   {
-    title: title.to_string(),
-    message: message.to_string(),
+    title: title.to_owned(),
+    message: message.to_owned(),
     level,
     labels: DialogLabels::none(),
   }

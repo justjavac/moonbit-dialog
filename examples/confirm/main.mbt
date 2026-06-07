@@ -5,10 +5,10 @@ fn main {
     @dialog.ask_yes_no("Overwrite the generated files?", title="moonbit-dialog") {
     Ok(outcome) =>
       match outcome.response {
-        Yes => println("Confirmed with \{outcome.backend}")
-        No => println("Declined on \{outcome.backend}")
-        _ => println("Unexpected response: \{outcome.response}")
+        Yes => println("Confirmed with \{to_repr(outcome.backend)}")
+        No => println("Declined on \{to_repr(outcome.backend)}")
+        _ => println("Unexpected response: \{to_repr(outcome.response)}")
       }
-    Err(error) => println("Dialog failed: \{error}")
+    Err(error) => println("Dialog failed: \{to_repr(error)}")
   }
 }

@@ -11,7 +11,7 @@ pub fn OpenFilesDialog::new(
   title? : StringView = "Open Files",
   directory? : StringView = "",
 ) -> OpenFilesDialog {
-  { title: title.to_string(), directory: directory.to_string(), filters: [] }
+  { title: title.to_owned(), directory: directory.to_owned(), filters: [] }
 }
 
 ///|

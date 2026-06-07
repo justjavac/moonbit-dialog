@@ -13,13 +13,15 @@ fn main {
     Ok(outcome) =>
       match outcome.selection {
         Selected(paths) => {
-          println("Picked \{paths.length()} files with \{outcome.backend}")
+          println(
+            "Picked \{paths.length()} files with \{to_repr(outcome.backend)}",
+          )
           for path in paths {
             println(" - \{path}")
           }
         }
         Cancelled => println("Open files cancelled")
       }
-    Err(error) => println("Dialog failed: \{error}")
+    Err(error) => println("Dialog failed: \{to_repr(error)}")
   }
 }

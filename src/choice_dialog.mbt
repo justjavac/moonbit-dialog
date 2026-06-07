@@ -16,8 +16,8 @@ pub fn ChoiceDialog::new(
   level? : DialogLevel = Info,
 ) -> ChoiceDialog {
   {
-    title: title.to_string(),
-    message: message.to_string(),
+    title: title.to_owned(),
+    message: message.to_owned(),
     level,
     buttons,
     labels: DialogLabels::none(),
