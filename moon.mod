@@ -17,4 +17,5 @@ preferred_target = "native"
 options(
   source: "src",
   supported_targets: "+native",
+  "--moonbit-unstable-prebuild": "native_link_config.mjs",
 )
