@@ -14,8 +14,9 @@ description = "Native-only message dialogs for MoonBit on Windows, macOS, and Li
 
 preferred_target = "native"
 
+source = "src"
+
 options(
-  source: "src",
   supported_targets: "+native",
   "--moonbit-unstable-prebuild": "native_link_config.mjs",
 )
